@@ -107,6 +107,16 @@ async def run_storm_pipeline(days_back: int = 14):
                 else "WARM" if zone.damage_probability >= 0.4
                 else "COLD"
             ),
+            # Individual hail report coordinates — used by Golden Nugget finder
+            "source_event_locs": [
+                {
+                    "lat": round(e.latitude, 5),
+                    "lon": round(e.longitude, 5),
+                    "hail_inches": e.hail_size_inches or 0.0,
+                }
+                for e in (zone.source_events or [])
+                if e.latitude and e.longitude and e.hail_size_inches
+            ],
         }
         results.append(result)
 

@@ -76,7 +76,279 @@
       "lon": -94.6584
     },
     "report_radius_miles": 4.98,
-    "tier": "HOT"
+    "tier": "HOT",
+    "source_event_locs": [
+      {
+        "lat": 39.14,
+        "lon": -94.76,
+        "hail_inches": 3.0
+      },
+      {
+        "lat": 39.2,
+        "lon": -94.71,
+        "hail_inches": 2.5
+      },
+      {
+        "lat": 39.2,
+        "lon": -94.68,
+        "hail_inches": 3.25
+      },
+      {
+        "lat": 39.22,
+        "lon": -94.65,
+        "hail_inches": 2.0
+      },
+      {
+        "lat": 39.24,
+        "lon": -94.66,
+        "hail_inches": 2.5
+      },
+      {
+        "lat": 39.22,
+        "lon": -94.68,
+        "hail_inches": 4.0
+      },
+      {
+        "lat": 39.23,
+        "lon": -94.64,
+        "hail_inches": 4.0
+      },
+      {
+        "lat": 39.25,
+        "lon": -94.69,
+        "hail_inches": 4.5
+      },
+      {
+        "lat": 39.21,
+        "lon": -94.67,
+        "hail_inches": 2.0
+      },
+      {
+        "lat": 39.23,
+        "lon": -94.66,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 39.23,
+        "lon": -94.64,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.21,
+        "lon": -94.71,
+        "hail_inches": 2.75
+      },
+      {
+        "lat": 39.21,
+        "lon": -94.63,
+        "hail_inches": 2.75
+      },
+      {
+        "lat": 39.25,
+        "lon": -94.63,
+        "hail_inches": 2.75
+      },
+      {
+        "lat": 39.2,
+        "lon": -94.64,
+        "hail_inches": 2.25
+      },
+      {
+        "lat": 39.22,
+        "lon": -94.69,
+        "hail_inches": 3.0
+      },
+      {
+        "lat": 39.23,
+        "lon": -94.66,
+        "hail_inches": 1.75
+      },
+      {
+        "lat": 39.14,
+        "lon": -94.81,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 39.23,
+        "lon": -94.61,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.22,
+        "lon": -94.66,
+        "hail_inches": 2.75
+      },
+      {
+        "lat": 39.24,
+        "lon": -94.7,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 39.23,
+        "lon": -94.6,
+        "hail_inches": 3.5
+      },
+      {
+        "lat": 39.23,
+        "lon": -94.65,
+        "hail_inches": 2.75
+      },
+      {
+        "lat": 39.23,
+        "lon": -94.62,
+        "hail_inches": 2.75
+      },
+      {
+        "lat": 39.04,
+        "lon": -94.85,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.25,
+        "lon": -94.61,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 39.14,
+        "lon": -94.84,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 39.13,
+        "lon": -94.83,
+        "hail_inches": 1.75
+      },
+      {
+        "lat": 39.21,
+        "lon": -94.67,
+        "hail_inches": 2.0
+      },
+      {
+        "lat": 39.23,
+        "lon": -94.61,
+        "hail_inches": 2.0
+      },
+      {
+        "lat": 39.25,
+        "lon": -94.61,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 39.11,
+        "lon": -94.78,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.25,
+        "lon": -94.59,
+        "hail_inches": 2.0
+      },
+      {
+        "lat": 39.24,
+        "lon": -94.55,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.13,
+        "lon": -94.83,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.22,
+        "lon": -94.6,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 39.26,
+        "lon": -94.57,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 39.22,
+        "lon": -94.59,
+        "hail_inches": 2.0
+      },
+      {
+        "lat": 39.23,
+        "lon": -94.62,
+        "hail_inches": 3.5
+      },
+      {
+        "lat": 39.25,
+        "lon": -94.61,
+        "hail_inches": 2.5
+      },
+      {
+        "lat": 39.23,
+        "lon": -94.58,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 39.13,
+        "lon": -94.73,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 39.24,
+        "lon": -94.54,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 39.21,
+        "lon": -94.62,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 39.21,
+        "lon": -94.65,
+        "hail_inches": 2.25
+      },
+      {
+        "lat": 39.21,
+        "lon": -94.67,
+        "hail_inches": 2.0
+      },
+      {
+        "lat": 39.21,
+        "lon": -94.62,
+        "hail_inches": 1.75
+      },
+      {
+        "lat": 39.28,
+        "lon": -94.58,
+        "hail_inches": 2.0
+      },
+      {
+        "lat": 39.24,
+        "lon": -94.7,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.28,
+        "lon": -94.66,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 39.27,
+        "lon": -94.66,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 39.27,
+        "lon": -94.66,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.27,
+        "lon": -94.66,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.26,
+        "lon": -94.6,
+        "hail_inches": 1.75
+      }
+    ]
   },
   {
     "zone_id": "KC-20260310-006",
@@ -177,7 +449,304 @@
       "lon": -94.6532
     },
     "report_radius_miles": 6.0,
-    "tier": "HOT"
+    "tier": "HOT",
+    "source_event_locs": [
+      {
+        "lat": 39.14,
+        "lon": -94.76,
+        "hail_inches": 3.0
+      },
+      {
+        "lat": 39.2,
+        "lon": -94.71,
+        "hail_inches": 2.5
+      },
+      {
+        "lat": 39.2,
+        "lon": -94.68,
+        "hail_inches": 3.25
+      },
+      {
+        "lat": 39.22,
+        "lon": -94.65,
+        "hail_inches": 2.0
+      },
+      {
+        "lat": 39.06,
+        "lon": -94.95,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.24,
+        "lon": -94.66,
+        "hail_inches": 2.5
+      },
+      {
+        "lat": 39.22,
+        "lon": -94.68,
+        "hail_inches": 4.0
+      },
+      {
+        "lat": 39.23,
+        "lon": -94.64,
+        "hail_inches": 4.0
+      },
+      {
+        "lat": 39.25,
+        "lon": -94.69,
+        "hail_inches": 4.5
+      },
+      {
+        "lat": 39.21,
+        "lon": -94.67,
+        "hail_inches": 2.0
+      },
+      {
+        "lat": 39.23,
+        "lon": -94.66,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 39.23,
+        "lon": -94.64,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.21,
+        "lon": -94.71,
+        "hail_inches": 2.75
+      },
+      {
+        "lat": 39.21,
+        "lon": -94.63,
+        "hail_inches": 2.75
+      },
+      {
+        "lat": 39.25,
+        "lon": -94.63,
+        "hail_inches": 2.75
+      },
+      {
+        "lat": 39.2,
+        "lon": -94.64,
+        "hail_inches": 2.25
+      },
+      {
+        "lat": 39.22,
+        "lon": -94.69,
+        "hail_inches": 3.0
+      },
+      {
+        "lat": 39.23,
+        "lon": -94.66,
+        "hail_inches": 1.75
+      },
+      {
+        "lat": 39.14,
+        "lon": -94.81,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 39.23,
+        "lon": -94.61,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.22,
+        "lon": -94.66,
+        "hail_inches": 2.75
+      },
+      {
+        "lat": 39.24,
+        "lon": -94.7,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 39.23,
+        "lon": -94.6,
+        "hail_inches": 3.5
+      },
+      {
+        "lat": 39.23,
+        "lon": -94.65,
+        "hail_inches": 2.75
+      },
+      {
+        "lat": 39.23,
+        "lon": -94.62,
+        "hail_inches": 2.75
+      },
+      {
+        "lat": 39.04,
+        "lon": -94.85,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.25,
+        "lon": -94.61,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 39.14,
+        "lon": -94.84,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 39.13,
+        "lon": -94.83,
+        "hail_inches": 1.75
+      },
+      {
+        "lat": 39.21,
+        "lon": -94.67,
+        "hail_inches": 2.0
+      },
+      {
+        "lat": 39.23,
+        "lon": -94.61,
+        "hail_inches": 2.0
+      },
+      {
+        "lat": 39.25,
+        "lon": -94.61,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 39.11,
+        "lon": -94.78,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.25,
+        "lon": -94.59,
+        "hail_inches": 2.0
+      },
+      {
+        "lat": 39.24,
+        "lon": -94.55,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.13,
+        "lon": -94.83,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.22,
+        "lon": -94.6,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 39.26,
+        "lon": -94.57,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 39.22,
+        "lon": -94.59,
+        "hail_inches": 2.0
+      },
+      {
+        "lat": 39.23,
+        "lon": -94.62,
+        "hail_inches": 3.5
+      },
+      {
+        "lat": 39.25,
+        "lon": -94.61,
+        "hail_inches": 2.5
+      },
+      {
+        "lat": 39.23,
+        "lon": -94.58,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 39.13,
+        "lon": -94.73,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 39.24,
+        "lon": -94.54,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 39.21,
+        "lon": -94.62,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 39.28,
+        "lon": -94.55,
+        "hail_inches": 2.5
+      },
+      {
+        "lat": 39.21,
+        "lon": -94.65,
+        "hail_inches": 2.25
+      },
+      {
+        "lat": 39.21,
+        "lon": -94.67,
+        "hail_inches": 2.0
+      },
+      {
+        "lat": 39.3,
+        "lon": -94.5,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 39.28,
+        "lon": -94.5,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 39.21,
+        "lon": -94.62,
+        "hail_inches": 1.75
+      },
+      {
+        "lat": 39.28,
+        "lon": -94.58,
+        "hail_inches": 2.0
+      },
+      {
+        "lat": 39.24,
+        "lon": -94.7,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.28,
+        "lon": -94.66,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 39.27,
+        "lon": -94.66,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 39.27,
+        "lon": -94.66,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.27,
+        "lon": -94.66,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.27,
+        "lon": -94.51,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 39.26,
+        "lon": -94.6,
+        "hail_inches": 1.75
+      }
+    ]
   },
   {
     "zone_id": "KC-20260311-008",
@@ -248,7 +817,294 @@
       "lon": -94.6085
     },
     "report_radius_miles": 5.6,
-    "tier": "HOT"
+    "tier": "HOT",
+    "source_event_locs": [
+      {
+        "lat": 39.2,
+        "lon": -94.71,
+        "hail_inches": 2.5
+      },
+      {
+        "lat": 39.2,
+        "lon": -94.68,
+        "hail_inches": 3.25
+      },
+      {
+        "lat": 39.22,
+        "lon": -94.65,
+        "hail_inches": 2.0
+      },
+      {
+        "lat": 39.24,
+        "lon": -94.66,
+        "hail_inches": 2.5
+      },
+      {
+        "lat": 39.22,
+        "lon": -94.68,
+        "hail_inches": 4.0
+      },
+      {
+        "lat": 39.23,
+        "lon": -94.64,
+        "hail_inches": 4.0
+      },
+      {
+        "lat": 39.25,
+        "lon": -94.69,
+        "hail_inches": 4.5
+      },
+      {
+        "lat": 39.21,
+        "lon": -94.67,
+        "hail_inches": 2.0
+      },
+      {
+        "lat": 39.23,
+        "lon": -94.66,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 39.23,
+        "lon": -94.64,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.21,
+        "lon": -94.71,
+        "hail_inches": 2.75
+      },
+      {
+        "lat": 39.21,
+        "lon": -94.63,
+        "hail_inches": 2.75
+      },
+      {
+        "lat": 39.25,
+        "lon": -94.63,
+        "hail_inches": 2.75
+      },
+      {
+        "lat": 39.2,
+        "lon": -94.64,
+        "hail_inches": 2.25
+      },
+      {
+        "lat": 39.22,
+        "lon": -94.69,
+        "hail_inches": 3.0
+      },
+      {
+        "lat": 39.23,
+        "lon": -94.66,
+        "hail_inches": 1.75
+      },
+      {
+        "lat": 39.23,
+        "lon": -94.61,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.22,
+        "lon": -94.66,
+        "hail_inches": 2.75
+      },
+      {
+        "lat": 39.24,
+        "lon": -94.7,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 39.23,
+        "lon": -94.6,
+        "hail_inches": 3.5
+      },
+      {
+        "lat": 39.23,
+        "lon": -94.65,
+        "hail_inches": 2.75
+      },
+      {
+        "lat": 39.23,
+        "lon": -94.62,
+        "hail_inches": 2.75
+      },
+      {
+        "lat": 39.25,
+        "lon": -94.61,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 39.21,
+        "lon": -94.67,
+        "hail_inches": 2.0
+      },
+      {
+        "lat": 39.23,
+        "lon": -94.61,
+        "hail_inches": 2.0
+      },
+      {
+        "lat": 39.25,
+        "lon": -94.61,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 39.25,
+        "lon": -94.59,
+        "hail_inches": 2.0
+      },
+      {
+        "lat": 39.24,
+        "lon": -94.55,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.22,
+        "lon": -94.6,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 39.26,
+        "lon": -94.57,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 39.22,
+        "lon": -94.59,
+        "hail_inches": 2.0
+      },
+      {
+        "lat": 39.23,
+        "lon": -94.62,
+        "hail_inches": 3.5
+      },
+      {
+        "lat": 39.25,
+        "lon": -94.61,
+        "hail_inches": 2.5
+      },
+      {
+        "lat": 39.23,
+        "lon": -94.58,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 39.24,
+        "lon": -94.54,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 39.21,
+        "lon": -94.62,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 39.28,
+        "lon": -94.55,
+        "hail_inches": 2.5
+      },
+      {
+        "lat": 39.21,
+        "lon": -94.65,
+        "hail_inches": 2.25
+      },
+      {
+        "lat": 39.21,
+        "lon": -94.67,
+        "hail_inches": 2.0
+      },
+      {
+        "lat": 39.3,
+        "lon": -94.5,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 39.28,
+        "lon": -94.5,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 39.37,
+        "lon": -94.36,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.21,
+        "lon": -94.62,
+        "hail_inches": 1.75
+      },
+      {
+        "lat": 39.28,
+        "lon": -94.58,
+        "hail_inches": 2.0
+      },
+      {
+        "lat": 39.24,
+        "lon": -94.7,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.28,
+        "lon": -94.66,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 39.27,
+        "lon": -94.66,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 39.27,
+        "lon": -94.66,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.44,
+        "lon": -94.2,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 39.45,
+        "lon": -94.34,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.27,
+        "lon": -94.66,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.27,
+        "lon": -94.51,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 39.26,
+        "lon": -94.6,
+        "hail_inches": 1.75
+      },
+      {
+        "lat": 39.34,
+        "lon": -94.16,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.34,
+        "lon": -94.23,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.34,
+        "lon": -94.15,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.34,
+        "lon": -94.23,
+        "hail_inches": 1.0
+      }
+    ]
   },
   {
     "zone_id": "KC-20260311-010",
@@ -337,7 +1193,169 @@
       "lon": -94.6798
     },
     "report_radius_miles": 6.0,
-    "tier": "HOT"
+    "tier": "HOT",
+    "source_event_locs": [
+      {
+        "lat": 38.87,
+        "lon": -94.69,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 38.94,
+        "lon": -94.54,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 38.88,
+        "lon": -94.69,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.94,
+        "lon": -94.53,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 38.78,
+        "lon": -94.8,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.8,
+        "lon": -94.45,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.84,
+        "lon": -94.8,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.85,
+        "lon": -94.74,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.83,
+        "lon": -94.8,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.86,
+        "lon": -94.76,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.81,
+        "lon": -94.78,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.87,
+        "lon": -94.75,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.85,
+        "lon": -94.75,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.98,
+        "lon": -94.6,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.76,
+        "lon": -95.01,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.95,
+        "lon": -94.63,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.88,
+        "lon": -94.59,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.96,
+        "lon": -94.65,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.99,
+        "lon": -94.49,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 38.99,
+        "lon": -94.47,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 38.81,
+        "lon": -94.78,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.85,
+        "lon": -94.74,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 38.81,
+        "lon": -94.83,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.86,
+        "lon": -94.69,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 38.87,
+        "lon": -94.74,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.86,
+        "lon": -94.74,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 38.86,
+        "lon": -94.75,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 38.93,
+        "lon": -94.68,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 38.88,
+        "lon": -94.65,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.88,
+        "lon": -94.66,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.9,
+        "lon": -94.64,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.95,
+        "lon": -94.52,
+        "hail_inches": 1.5
+      }
+    ]
   },
   {
     "zone_id": "KC-20260311-012",
@@ -428,7 +1446,159 @@
       "lon": -94.6874
     },
     "report_radius_miles": 6.0,
-    "tier": "HOT"
+    "tier": "HOT",
+    "source_event_locs": [
+      {
+        "lat": 38.87,
+        "lon": -94.69,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 38.94,
+        "lon": -94.54,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 38.88,
+        "lon": -94.69,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.94,
+        "lon": -94.53,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 38.78,
+        "lon": -94.8,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.84,
+        "lon": -94.8,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.85,
+        "lon": -94.74,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.83,
+        "lon": -94.8,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.86,
+        "lon": -94.76,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.81,
+        "lon": -94.78,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.87,
+        "lon": -94.75,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.85,
+        "lon": -94.75,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.98,
+        "lon": -94.6,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.76,
+        "lon": -95.01,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.95,
+        "lon": -94.63,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.88,
+        "lon": -94.59,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.99,
+        "lon": -94.49,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 38.99,
+        "lon": -94.47,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 38.81,
+        "lon": -94.78,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.85,
+        "lon": -94.74,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 38.81,
+        "lon": -94.83,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.86,
+        "lon": -94.69,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 38.87,
+        "lon": -94.74,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.86,
+        "lon": -94.74,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 38.86,
+        "lon": -94.75,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 38.93,
+        "lon": -94.68,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 38.88,
+        "lon": -94.65,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.88,
+        "lon": -94.66,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.9,
+        "lon": -94.64,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.95,
+        "lon": -94.52,
+        "hail_inches": 1.5
+      }
+    ]
   },
   {
     "zone_id": "KC-20260311-013",
@@ -479,7 +1649,124 @@
       "lon": -94.7354
     },
     "report_radius_miles": 6.0,
-    "tier": "HOT"
+    "tier": "HOT",
+    "source_event_locs": [
+      {
+        "lat": 38.87,
+        "lon": -94.69,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 38.88,
+        "lon": -94.69,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.78,
+        "lon": -94.8,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.85,
+        "lon": -94.74,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.83,
+        "lon": -94.8,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.86,
+        "lon": -94.76,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.81,
+        "lon": -94.78,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.87,
+        "lon": -94.75,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.85,
+        "lon": -94.75,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.76,
+        "lon": -95.01,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.95,
+        "lon": -94.63,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.96,
+        "lon": -94.65,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.81,
+        "lon": -94.78,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.85,
+        "lon": -94.74,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 38.81,
+        "lon": -94.83,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.86,
+        "lon": -94.69,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 38.87,
+        "lon": -94.74,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.86,
+        "lon": -94.74,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 38.86,
+        "lon": -94.75,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 38.93,
+        "lon": -94.68,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 38.88,
+        "lon": -94.65,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.88,
+        "lon": -94.66,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.9,
+        "lon": -94.64,
+        "hail_inches": 1.0
+      }
+    ]
   },
   {
     "zone_id": "KC-20260311-014",
@@ -584,7 +1871,139 @@
       "lon": -94.5839
     },
     "report_radius_miles": 6.0,
-    "tier": "HOT"
+    "tier": "HOT",
+    "source_event_locs": [
+      {
+        "lat": 38.87,
+        "lon": -94.69,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 38.94,
+        "lon": -94.54,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 38.88,
+        "lon": -94.69,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.94,
+        "lon": -94.53,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 38.99,
+        "lon": -94.34,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.94,
+        "lon": -94.41,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.0,
+        "lon": -94.36,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.78,
+        "lon": -94.8,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.04,
+        "lon": -94.27,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 39.05,
+        "lon": -94.26,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.02,
+        "lon": -94.32,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.8,
+        "lon": -94.45,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.99,
+        "lon": -94.49,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 38.99,
+        "lon": -94.47,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 38.81,
+        "lon": -94.78,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.85,
+        "lon": -94.74,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 38.81,
+        "lon": -94.83,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.86,
+        "lon": -94.69,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 38.87,
+        "lon": -94.74,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.86,
+        "lon": -94.74,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 38.86,
+        "lon": -94.75,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 38.93,
+        "lon": -94.68,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 38.88,
+        "lon": -94.65,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.88,
+        "lon": -94.66,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.9,
+        "lon": -94.64,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 38.95,
+        "lon": -94.52,
+        "hail_inches": 1.5
+      }
+    ]
   },
   {
     "zone_id": "KC-20260311-011",
@@ -662,7 +2081,29 @@
       "lon": -94.5045
     },
     "report_radius_miles": 3.26,
-    "tier": "HOT"
+    "tier": "HOT",
+    "source_event_locs": [
+      {
+        "lat": 38.94,
+        "lon": -94.53,
+        "hail_inches": 1.5
+      },
+      {
+        "lat": 38.99,
+        "lon": -94.49,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 38.99,
+        "lon": -94.47,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 38.95,
+        "lon": -94.52,
+        "hail_inches": 1.5
+      }
+    ]
   },
   {
     "zone_id": "KC-20260310-007",
@@ -690,7 +2131,44 @@
       "lon": -94.2372
     },
     "report_radius_miles": 6.0,
-    "tier": "WARM"
+    "tier": "WARM",
+    "source_event_locs": [
+      {
+        "lat": 39.37,
+        "lon": -94.36,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.44,
+        "lon": -94.2,
+        "hail_inches": 1.25
+      },
+      {
+        "lat": 39.45,
+        "lon": -94.34,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.34,
+        "lon": -94.16,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.34,
+        "lon": -94.23,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.34,
+        "lon": -94.15,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.34,
+        "lon": -94.23,
+        "hail_inches": 1.0
+      }
+    ]
   },
   {
     "zone_id": "KC-20260310-005",
@@ -733,7 +2211,24 @@
       "lon": -94.9167
     },
     "report_radius_miles": 5.69,
-    "tier": "WARM"
+    "tier": "WARM",
+    "source_event_locs": [
+      {
+        "lat": 38.95,
+        "lon": -94.95,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.06,
+        "lon": -94.95,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.04,
+        "lon": -94.85,
+        "hail_inches": 1.0
+      }
+    ]
   },
   {
     "zone_id": "KC-20260311-009",
@@ -761,7 +2256,19 @@
       "lon": -94.23
     },
     "report_radius_miles": 0.75,
-    "tier": "WARM"
+    "tier": "WARM",
+    "source_event_locs": [
+      {
+        "lat": 39.34,
+        "lon": -94.23,
+        "hail_inches": 1.0
+      },
+      {
+        "lat": 39.34,
+        "lon": -94.23,
+        "hail_inches": 1.0
+      }
+    ]
   },
   {
     "zone_id": "KC-20260311-002",
@@ -787,7 +2294,14 @@
       "lon": -94.64
     },
     "report_radius_miles": 0.75,
-    "tier": "WARM"
+    "tier": "WARM",
+    "source_event_locs": [
+      {
+        "lat": 39.0,
+        "lon": -94.64,
+        "hail_inches": 1.0
+      }
+    ]
   },
   {
     "zone_id": "KC-20260307-001",
@@ -884,7 +2398,8 @@
       "lon": -94.778
     },
     "report_radius_miles": 1.5,
-    "tier": "COLD"
+    "tier": "COLD",
+    "source_event_locs": []
   },
   {
     "zone_id": "KC-20260307-002",
@@ -978,7 +2493,8 @@
       "lon": -94.6162
     },
     "report_radius_miles": 1.5,
-    "tier": "COLD"
+    "tier": "COLD",
+    "source_event_locs": []
   },
   {
     "zone_id": "KC-20260307-003",
@@ -1076,7 +2592,8 @@
       "lon": -94.29
     },
     "report_radius_miles": 1.5,
-    "tier": "COLD"
+    "tier": "COLD",
+    "source_event_locs": []
   },
   {
     "zone_id": "KC-20260310-001",
@@ -1097,6 +2614,13 @@
       "lon": -95.1
     },
     "report_radius_miles": 0.75,
-    "tier": "COLD"
+    "tier": "COLD",
+    "source_event_locs": [
+      {
+        "lat": 38.94,
+        "lon": -95.1,
+        "hail_inches": 0.88
+      }
+    ]
   }
 ]
