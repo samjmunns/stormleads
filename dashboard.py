@@ -356,6 +356,48 @@ async def get_golden_nuggets(
     })
 
 
+@app.get("/api/mrms")
+async def get_mrms_data(days: int = Query(default=14, ge=1, le=60)):
+    """NOAA MRMS MESH radar hail estimates for KC metro."""
+    from mrms_client import get_mrms_hail
+    points = await get_mrms_hail(days_back=days)
+    return JSONResponse(content={"points": points, "count": len(points)})
+
+
+@app.get("/api/properties")
+async def get_property_leads(
+    zone_id: str = Query(default=""),
+    days: int = Query(default=14, ge=1, le=60),
+    min_hail: float = Query(default=0.0),
+):
+    """Address-level property leads from county assessor for a storm zone."""
+    zones_response = await get_zones(days=days, min_hail=min_hail, min_wind=0.0)
+    zones_data = json.loads(zones_response.body)
+    zones = zones_data.get("zones", [])
+    if not zones:
+        return JSONResponse(content={"properties": [], "zone_id": zone_id})
+
+    zone = next((z for z in zones if z.get("zone_id") == zone_id), None)
+    if zone is None:
+        zone = zones[0]  # default to highest-scoring zone
+
+    from assessor_client import AssessorClient
+    client = AssessorClient()
+    try:
+        props = await client.get_properties_in_zone(zone)
+    except Exception as e:
+        logger.error(f"Assessor query failed: {e}")
+        props = []
+
+    return JSONResponse(content={
+        "properties": props,
+        "zone_id": zone.get("zone_id", ""),
+        "zone_hail": zone.get("max_hail_inches", 0),
+        "zone_date": zone.get("storm_date", ""),
+        "count": len(props),
+    })
+
+
 @app.get("/api/forecast")
 async def get_forecast_data(
     lat: float = Query(default=39.0997),
@@ -1479,6 +1521,7 @@ async def dashboard():
   <button class="tab-btn active" id="tab-map-btn" onclick="switchTab('map')">Storm Map</button>
   <button class="tab-btn" id="tab-leads-btn" onclick="switchTab('leads')">Lead Scorer</button>
   <button class="tab-btn" id="tab-nuggets-btn" onclick="switchTab('nuggets')">Golden Nuggets</button>
+  <button class="tab-btn" id="tab-properties-btn" onclick="switchTab('properties')">Property Leads</button>
   <button class="tab-btn" id="tab-forecast-btn" onclick="switchTab('forecast')">Forecast</button>
   <button class="tab-btn" id="tab-sources-btn" onclick="switchTab('sources')">Sources</button>
 </div>
@@ -1529,6 +1572,7 @@ async def dashboard():
     <div class="map-container">
       <div id="map"></div>
       <button class="map-toggle-btn" id="map-toggle-btn" onclick="toggleMapLayer()">Satellite View</button>
+      <button class="map-toggle-btn" id="mrms-toggle-btn" onclick="toggleMrmsLayer()" style="bottom:50px">Radar Hail</button>
     </div>
   </div>
 
@@ -1583,6 +1627,48 @@ async def dashboard():
   </div>
 
   <!-- ===== FORECAST TAB ===== -->
+  <!-- ===== PROPERTY LEADS TAB ===== -->
+  <div class="tab-panel" id="tab-properties">
+    <div class="scorer-panel">
+      <div class="scorer-controls">
+        <div class="filter-group">
+          <label>Storm zone</label>
+          <select id="prop-zone-select" onchange="loadProperties()"
+            style="background:#0d1117;border:1px solid #30363d;border-radius:5px;color:#c9d1d9;font-family:inherit;font-size:12px;padding:4px 6px;min-width:200px">
+            <option value="">Loading zones...</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Days back (max 60)</label>
+          <input type="number" id="prop-filter-days" value="15" min="1" max="60"
+            style="background:#0d1117;border:1px solid #30363d;border-radius:5px;color:#c9d1d9;font-family:inherit;font-size:12px;padding:4px 6px;width:80px"
+            onchange="this.value=Math.min(60,Math.max(1,this.value||15));populatePropZones()">
+        </div>
+        <div class="filter-group">
+          <label>Min hail</label>
+          <select id="prop-filter-hail" onchange="populatePropZones()"
+            style="background:#0d1117;border:1px solid #30363d;border-radius:5px;color:#c9d1d9;font-family:inherit;font-size:12px;padding:4px 6px">
+            <option value="0" selected>Any size</option>
+            <option value="0.75">0.75"+ (penny)</option>
+            <option value="1.0">1.0"+ (quarter)</option>
+            <option value="1.5">1.5"+ (walnut)</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" id="prop-export-btn" onclick="exportPropertiesCSV()" style="margin-left:auto;display:none">Export CSV</button>
+        <span id="prop-count" style="font-size:12px;color:#6e7681"></span>
+      </div>
+      <div id="prop-loading" style="display:none;padding:20px;color:#8b949e;font-size:13px">
+        <span class="loading-spinner"></span>Fetching property records from county assessor...
+      </div>
+      <div id="prop-table-wrap"></div>
+      <div style="margin-top:10px;font-size:11px;color:#6e7681;line-height:1.8">
+        Sorted by year built (oldest first = highest priority) &nbsp;|&nbsp;
+        Data: Jackson County MO + Johnson County KS ArcGIS public services &nbsp;|&nbsp;
+        Residential properties only &nbsp;|&nbsp; Max 2,000 per zone
+      </div>
+    </div>
+  </div>
+
   <div class="tab-panel" id="tab-forecast">
     <div class="forecast-panel">
       <div class="forecast-title">14-Day KC Metro Weather Forecast</div>
@@ -1878,6 +1964,68 @@ async def dashboard():
             <p><strong>Canvassing score</strong> combines sky conditions, temperature comfort (65&ndash;82&deg;F is ideal), and wind speed into a single label: Ideal / Good / Decent / Fair / Poor / Stay in.</p>
             <div class="caveat">
               <strong>Forecast confidence:</strong> Hail risk is most reliable in days 1&ndash;3 where NWS model data is highly accurate. Days 4&ndash;7 are medium confidence. Days 8&ndash;14 are directional only — a &ldquo;High&rdquo; hail risk at day 12 means conditions look favorable for storms, not that hail will definitely occur.
+            </div>
+          </div>
+        </div>
+
+        <!-- MRMS Radar -->
+        <div class="source-card">
+          <div class="source-card-header">
+            <div class="source-icon source-icon-orange" style="font-size:13px;font-weight:700;color:#f0883e">RDR</div>
+            <div>
+              <div class="source-title">MRMS Radar Hail Estimates <span class="accuracy-badge acc-high">High confidence</span></div>
+              <div class="source-subtitle">NOAA NEXRAD Storm Attributes via Iowa Environmental Mesonet</div>
+            </div>
+          </div>
+          <div class="source-body">
+            <p>The <strong>Radar Hail</strong> overlay on the Storm Map shows MRMS (Multi-Radar Multi-Sensor) hail size estimates at every storm cell location — filling in the full hail path where no human spotter was present to measure.</p>
+            <div class="highlight">
+              Endpoint: <strong>mesonet.agron.iastate.edu/cgi-bin/request/gis/nexrad_storm_attrs.py</strong><br>
+              Radars: KEAX (Kansas City/Pleasant Hill MO) + KTWX (Topeka KS)<br>
+              Key field: <strong>max_size</strong> — MESH hail size estimate in inches per storm cell<br>
+              Also includes: POSH (probability of severe hail), storm cell movement direction/speed
+            </div>
+            <table class="formula-table">
+              <tr><th>Color</th><th>Hail Size</th><th>Reference</th></tr>
+              <tr><td style="color:#6e7681">Gray</td><td>0.50&ndash;0.74"</td><td>Marble — minimal damage</td></tr>
+              <tr><td style="color:#d29922">Yellow</td><td>0.75&ndash;0.99"</td><td>Penny — cosmetic damage</td></tr>
+              <tr><td style="color:#f0883e">Orange</td><td>1.0&ndash;1.49"</td><td>Quarter/nickel — moderate risk</td></tr>
+              <tr><td style="color:#e8562a">Dark orange</td><td>1.5&ndash;1.99"</td><td>Walnut — probable damage</td></tr>
+              <tr><td style="color:#f85149">Red</td><td>2.0&ndash;2.49"</td><td>Hen egg — likely damage</td></tr>
+              <tr><td style="color:#9d00ff">Purple</td><td>2.5"+</td><td>Baseball+ — near-certain damage</td></tr>
+            </table>
+            <div class="caveat">
+              <strong>Limitation:</strong> MESH is a radar estimate, not a physical measurement. It can overestimate hail in heavy rain (bright-banding effect) and underestimate for isolated large hail in weaker storms. Treat it as directional — use alongside LSR point reports for highest confidence.
+            </div>
+          </div>
+        </div>
+
+        <!-- County Assessor -->
+        <div class="source-card">
+          <div class="source-card-header">
+            <div class="source-icon source-icon-green" style="font-size:13px;font-weight:700;color:#3fb950">PRO</div>
+            <div>
+              <div class="source-title">County Assessor Property Data <span class="accuracy-badge acc-high">Address-level</span></div>
+              <div class="source-subtitle">Jackson County MO + Johnson County KS public ArcGIS services</div>
+            </div>
+          </div>
+          <div class="source-body">
+            <p>The <strong>Property Leads</strong> tab pulls real property records from county assessor databases — giving you actual street addresses to knock, sorted by estimated roof age.</p>
+            <div class="highlight">
+              Jackson County MO: <strong>jcgis.jacksongov.org/arcgis/rest/services/AssessorAnalysis/</strong><br>
+              Johnson County KS: <strong>public ArcGIS open data portal</strong><br>
+              Fields: address, year built, assessed value, owner name, property type<br>
+              Query: spatial intersection with storm zone boundary
+            </div>
+            <table class="formula-table">
+              <tr><th>Priority</th><th>Year Built / Roof Age</th><th>Why</th></tr>
+              <tr><td style="color:#f85149">Very High</td><td>Pre-1990 / 35+ yr</td><td>Original 3-tab shingles — highly vulnerable to hail</td></tr>
+              <tr><td style="color:#f0883e">High</td><td>1990&ndash;2000 / 25&ndash;35 yr</td><td>Aging shingles, many on 2nd roof cycle</td></tr>
+              <tr><td style="color:#d29922">Moderate</td><td>2001&ndash;2010 / 15&ndash;25 yr</td><td>Possible damage, worth inspecting</td></tr>
+              <tr><td style="color:#6e7681">Lower</td><td>Post-2010 / &lt;15 yr</td><td>Newer roofs — less likely to show damage</td></tr>
+            </table>
+            <div class="caveat">
+              <strong>Limitation:</strong> Year built data availability varies by county service version. Where year built is missing, only address and assessed value are shown. Data coverage is best within Jackson County MO; Johnson County KS coverage depends on their public layer availability.
             </div>
           </div>
         </div>
@@ -2208,11 +2356,15 @@ async def dashboard():
 
   // ---- TABS ----
   function switchTab(name) {
-    ['map', 'leads', 'nuggets', 'forecast', 'sources'].forEach(t => {
+    ['map', 'leads', 'nuggets', 'properties', 'forecast', 'sources'].forEach(t => {
       document.getElementById('tab-' + t).classList.toggle('active', t === name);
       document.getElementById('tab-' + t + '-btn').classList.toggle('active', t === name);
     });
-    if (name === 'leads') {
+    if (name === 'properties') {
+      const mapDays = Math.min(60, Math.max(1, parseInt(document.getElementById('filter-days').value) || 15));
+      document.getElementById('prop-filter-days').value = mapDays;
+      populatePropZones();
+    } else if (name === 'leads') {
       const mapDays = Math.min(60, Math.max(1, parseInt(document.getElementById('filter-days').value) || 15));
       document.getElementById('leads-filter-days').value = mapDays;
       loadLeads();
@@ -2641,6 +2793,193 @@ async def dashboard():
 
       tbody.appendChild(tr);
     });
+  }
+
+  // ---- MRMS RADAR HAIL OVERLAY ----
+  const mrmsLayer = L.layerGroup();
+  let mrmsVisible = false;
+  let mrmsLoaded = false;
+
+  async function toggleMrmsLayer() {
+    const btn = document.getElementById('mrms-toggle-btn');
+    if (mrmsVisible) {
+      map.removeLayer(mrmsLayer);
+      mrmsVisible = false;
+      btn.textContent = 'Radar Hail';
+      btn.style.borderColor = '';
+      return;
+    }
+    if (!mrmsLoaded) {
+      btn.textContent = 'Loading...';
+      const days = Math.min(60, Math.max(1, parseInt(document.getElementById('filter-days').value) || 15));
+      try {
+        const res = await fetch('/api/mrms?days=' + days);
+        const data = await res.json();
+        mrmsLayer.clearLayers();
+        (data.points || []).forEach(pt => {
+          const r = pt.max_hail >= 2.0 ? 10 : pt.max_hail >= 1.5 ? 8 : pt.max_hail >= 1.0 ? 7 : 5;
+          L.circleMarker([pt.lat, pt.lon], {
+            radius: r,
+            fillColor: pt.color,
+            color: pt.color,
+            weight: 1,
+            fillOpacity: 0.75,
+          }).bindPopup(
+            '<div style="font-family:monospace;font-size:12px">' +
+            '<strong>Radar Hail Estimate</strong><br>' +
+            'Size: <strong>' + pt.max_hail + '"</strong><br>' +
+            'Prob. severe hail: ' + pt.posh + '%<br>' +
+            'Radar: ' + pt.radar + ' / Cell: ' + pt.storm_id + '<br>' +
+            'Time: ' + new Date(pt.valid).toLocaleString('en-US', {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) +
+            '</div>'
+          ).addTo(mrmsLayer);
+        });
+        mrmsLoaded = true;
+        const cnt = data.count || 0;
+        btn.textContent = 'Hide Radar (' + cnt + ')';
+      } catch (e) {
+        btn.textContent = 'Radar Hail';
+        return;
+      }
+    } else {
+      btn.textContent = 'Hide Radar';
+    }
+    mrmsLayer.addTo(map);
+    mrmsVisible = true;
+    btn.style.borderColor = '#f0883e';
+  }
+
+  // ---- PROPERTY LEADS ----
+  let currentProperties = [];
+  let propZonesCache = [];
+
+  async function populatePropZones() {
+    const days = document.getElementById('prop-filter-days').value || 15;
+    const minHail = document.getElementById('prop-filter-hail').value || 0;
+    const sel = document.getElementById('prop-zone-select');
+    sel.innerHTML = '<option value="">Loading...</option>';
+    document.getElementById('prop-table-wrap').innerHTML = '';
+    document.getElementById('prop-export-btn').style.display = 'none';
+    document.getElementById('prop-count').textContent = '';
+
+    try {
+      const res = await fetch('/api/zones?days=' + days + '&min_hail=' + minHail);
+      const data = await res.json();
+      propZonesCache = data.zones || [];
+      sel.innerHTML = '';
+      if (!propZonesCache.length) {
+        sel.innerHTML = '<option value="">No zones found — try wider filters</option>';
+        return;
+      }
+      propZonesCache.forEach(z => {
+        const dt = z.storm_date ? new Date(z.storm_date).toLocaleDateString('en-US', {month:'short', day:'numeric'}) : '';
+        const opt = document.createElement('option');
+        opt.value = z.zone_id;
+        opt.textContent = z.zone_id + ' — ' + z.max_hail_inches + '" hail' + (dt ? ' (' + dt + ')' : '');
+        sel.appendChild(opt);
+      });
+      loadProperties();
+    } catch (e) {
+      sel.innerHTML = '<option value="">Error loading zones</option>';
+    }
+  }
+
+  async function loadProperties() {
+    const zoneId = document.getElementById('prop-zone-select').value;
+    const days = document.getElementById('prop-filter-days').value || 15;
+    const minHail = document.getElementById('prop-filter-hail').value || 0;
+    const wrap = document.getElementById('prop-table-wrap');
+    const loading = document.getElementById('prop-loading');
+    if (!zoneId) return;
+
+    wrap.innerHTML = '';
+    loading.style.display = 'block';
+    document.getElementById('prop-export-btn').style.display = 'none';
+    document.getElementById('prop-count').textContent = '';
+
+    try {
+      const res = await fetch('/api/properties?zone_id=' + encodeURIComponent(zoneId) + '&days=' + days + '&min_hail=' + minHail);
+      const data = await res.json();
+      loading.style.display = 'none';
+      currentProperties = data.properties || [];
+      renderProperties(currentProperties, data);
+    } catch (e) {
+      loading.style.display = 'none';
+      wrap.innerHTML = '<div class="scorer-empty">Error loading properties: ' + e.message + '</div>';
+    }
+  }
+
+  function renderProperties(props, meta) {
+    const wrap = document.getElementById('prop-table-wrap');
+    const countEl = document.getElementById('prop-count');
+    const exportBtn = document.getElementById('prop-export-btn');
+
+    if (!props.length) {
+      wrap.innerHTML = '<div class="scorer-empty">No residential properties found in this zone.<br>This may mean the assessor data for this area is not yet available, or the zone is outside Jackson/Johnson County.</div>';
+      countEl.textContent = '';
+      return;
+    }
+
+    countEl.textContent = props.length + ' properties';
+    exportBtn.style.display = 'inline-block';
+
+    const hailDate = meta.zone_date ? new Date(meta.zone_date).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}) : '';
+    const hailSize = meta.zone_hail ? meta.zone_hail + '"' : '';
+
+    let html = '<div class="scorer-table-wrap"><table class="scorer-table">';
+    html += '<thead><tr>' +
+      '<th>#</th>' +
+      '<th>Address</th>' +
+      '<th>City</th>' +
+      '<th>County</th>' +
+      '<th class="numeric">Year Built</th>' +
+      '<th class="numeric">Est. Roof Age</th>' +
+      '<th class="numeric">Assessed Value</th>' +
+      '<th>Priority</th>' +
+      '</tr></thead><tbody>';
+
+    const currentYear = new Date().getFullYear();
+    props.forEach((p, i) => {
+      const yr = p.year_built;
+      const age = yr ? currentYear - yr : null;
+      const ageColor = age >= 30 ? '#f85149' : age >= 20 ? '#f0883e' : age >= 10 ? '#d29922' : '#6e7681';
+      const priority = age >= 35 ? 'Very High' : age >= 25 ? 'High' : age >= 15 ? 'Moderate' : age ? 'Lower' : '—';
+      const priColor = age >= 35 ? '#f85149' : age >= 25 ? '#f0883e' : age >= 15 ? '#d29922' : '#6e7681';
+      const val = p.assessed_value;
+      const valStr = val > 0 ? '$' + (val >= 1000 ? Math.round(val/1000) + 'k' : val) : '—';
+
+      html += '<tr>' +
+        '<td><span class="rank-num">' + (i + 1) + '</span></td>' +
+        '<td style="font-size:12px;font-weight:500">' + (p.address || '—') + '</td>' +
+        '<td style="font-size:11px;color:#8b949e">' + (p.city || '') + ', ' + (p.state || '') + '</td>' +
+        '<td style="font-size:11px;color:#8b949e">' + (p.county || '') + '</td>' +
+        '<td class="numeric demo-cell ' + (yr ? 'available' : '') + '">' + (yr || '—') + '</td>' +
+        '<td class="numeric" style="color:' + ageColor + ';font-weight:600">' + (age != null ? age + ' yr' : '—') + '</td>' +
+        '<td class="numeric demo-cell ' + (val > 0 ? 'available' : '') + '">' + valStr + '</td>' +
+        '<td style="color:' + priColor + ';font-size:12px;font-weight:600">' + priority + '</td>' +
+      '</tr>';
+    });
+
+    html += '</tbody></table></div>';
+    wrap.innerHTML = html;
+  }
+
+  function exportPropertiesCSV() {
+    if (!currentProperties.length) return;
+    const currentYear = new Date().getFullYear();
+    const zoneId = document.getElementById('prop-zone-select').value;
+    const rows = [['Rank', 'Address', 'City', 'State', 'ZIP', 'County', 'Year Built', 'Roof Age (yr)', 'Assessed Value', 'Priority']];
+    currentProperties.forEach((p, i) => {
+      const age = p.year_built ? currentYear - p.year_built : '';
+      const priority = age >= 35 ? 'Very High' : age >= 25 ? 'High' : age >= 15 ? 'Moderate' : age ? 'Lower' : '';
+      rows.push([i + 1, p.address, p.city, p.state, p.zip, p.county, p.year_built || '', age, p.assessed_value || '', priority]);
+    });
+    const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\n');
+    const blob = new Blob([csv], {type: 'text/csv'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'stormleads_properties_' + zoneId.replace(/[^a-z0-9]/gi, '_') + '.csv';
+    a.click();
   }
 
   // ---- INIT ----
