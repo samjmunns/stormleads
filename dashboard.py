@@ -2974,7 +2974,7 @@ async def dashboard():
       const priority = age >= 35 ? 'Very High' : age >= 25 ? 'High' : age >= 15 ? 'Moderate' : age ? 'Lower' : '';
       rows.push([i + 1, p.address, p.city, p.state, p.zip, p.county, p.year_built || '', age, p.assessed_value || '', priority]);
     });
-    const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\n');
+    const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\\n');
     const blob = new Blob([csv], {type: 'text/csv'});
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
