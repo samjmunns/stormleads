@@ -608,6 +608,25 @@ async def dashboard():
 
   #map { width: 100%; height: 100%; }
 
+  .map-toggle-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 1000;
+    padding: 7px 14px;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(13,17,23,0.85);
+    color: #c9d1d9;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+    transition: all 0.15s;
+  }
+  .map-toggle-btn:hover { background: rgba(30,37,46,0.95); border-color: rgba(255,255,255,0.3); }
+
   .leaflet-popup-content-wrapper {
     background: #161b22 !important;
     color: #c9d1d9 !important;
@@ -1334,6 +1353,7 @@ async def dashboard():
     </aside>
     <div class="map-container">
       <div id="map"></div>
+      <button class="map-toggle-btn" id="map-toggle-btn" onclick="toggleMapLayer()">&#128754; Satellite</button>
     </div>
   </div>
 
@@ -1383,8 +1403,9 @@ async def dashboard():
           &#128203; Copy canvass list
         </button>
       </aside>
-      <div class="nugget-map-wrap">
+      <div class="nugget-map-wrap" style="position:relative">
         <div id="nugget-map"></div>
+        <button class="map-toggle-btn" id="nugget-toggle-btn" onclick="toggleNuggetLayer()">&#128754; Satellite</button>
       </div>
     </div>
   </div>
@@ -1645,10 +1666,28 @@ async def dashboard():
     attributionControl: false
   }).setView([39.0997, -94.5786], 11);
 
-  // Dark map tiles (free, no API key)
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    maxZoom: 19
-  }).addTo(map);
+  // Map tile layers
+  const darkTile = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 });
+  const satelliteTile = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
+  const satelliteLabel = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', { maxZoom: 19 });
+  darkTile.addTo(map);
+
+  let isSatellite = false;
+  function toggleMapLayer() {
+    if (isSatellite) {
+      map.removeLayer(satelliteTile);
+      map.removeLayer(satelliteLabel);
+      darkTile.addTo(map);
+      isSatellite = false;
+      document.getElementById('map-toggle-btn').textContent = '🛰 Satellite';
+    } else {
+      map.removeLayer(darkTile);
+      satelliteTile.addTo(map);
+      satelliteLabel.addTo(map);
+      isSatellite = true;
+      document.getElementById('map-toggle-btn').textContent = '🗺 Dark Map';
+    }
+  }
 
   // Layer group for damage zones
   const zoneLayer = L.layerGroup().addTo(map);
@@ -2002,9 +2041,27 @@ async def dashboard():
       attributionControl: false,
     }).setView([39.0997, -94.5786], 11);
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      maxZoom: 19,
-    }).addTo(nuggetMap);
+    const nuggetDarkTile = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 });
+    const nuggetSatTile = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
+    const nuggetSatLabel = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', { maxZoom: 19 });
+    nuggetDarkTile.addTo(nuggetMap);
+
+    let isNuggetSat = false;
+    window.toggleNuggetLayer = function() {
+      if (isNuggetSat) {
+        nuggetMap.removeLayer(nuggetSatTile);
+        nuggetMap.removeLayer(nuggetSatLabel);
+        nuggetDarkTile.addTo(nuggetMap);
+        isNuggetSat = false;
+        document.getElementById('nugget-toggle-btn').textContent = '🛰 Satellite';
+      } else {
+        nuggetMap.removeLayer(nuggetDarkTile);
+        nuggetSatTile.addTo(nuggetMap);
+        nuggetSatLabel.addTo(nuggetMap);
+        isNuggetSat = true;
+        document.getElementById('nugget-toggle-btn').textContent = '🗺 Dark Map';
+      }
+    };
 
     nuggetLayer = L.layerGroup().addTo(nuggetMap);
   }
