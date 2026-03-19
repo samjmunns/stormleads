@@ -115,9 +115,11 @@ def _canvass_score(code: int, high_f: float, precip_prob: int, wind_mph: float) 
     return {"score": score, "label": label, "color": color}
 
 
-async def get_forecast() -> dict:
+async def get_forecast(lat: float = KC_LAT, lon: float = KC_LON) -> dict:
     """
-    Fetch 14-day daily forecast for KC metro from Open-Meteo.
+    Fetch 14-day daily forecast from Open-Meteo for any lat/lon.
+
+    Defaults to KC metro center. Pass lat/lon for submarket forecasts.
 
     Returns dict with:
       days    — list of daily forecast dicts
@@ -125,8 +127,8 @@ async def get_forecast() -> dict:
       week2   — summary for days 8-14
     """
     params = {
-        "latitude": KC_LAT,
-        "longitude": KC_LON,
+        "latitude": lat,
+        "longitude": lon,
         "daily": ",".join([
             "weathercode",
             "temperature_2m_max",

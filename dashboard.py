@@ -357,10 +357,13 @@ async def get_golden_nuggets(
 
 
 @app.get("/api/forecast")
-async def get_forecast_data():
+async def get_forecast_data(
+    lat: float = Query(default=39.0997),
+    lon: float = Query(default=-94.5786),
+):
     """Return 14-day weather forecast with hail risk and canvassing scores."""
     from forecast_client import get_forecast
-    data = await get_forecast()
+    data = await get_forecast(lat=lat, lon=lon)
     return JSONResponse(content=data)
 
 
@@ -1583,7 +1586,22 @@ async def dashboard():
   <div class="tab-panel" id="tab-forecast">
     <div class="forecast-panel">
       <div class="forecast-title">14-Day KC Metro Weather Forecast</div>
-      <div class="forecast-subtitle">Kansas City Metro &mdash; Updated hourly via Open-Meteo &mdash; Hail risk accuracy highest within first 3 days</div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;flex-wrap:wrap">
+        <div class="forecast-subtitle" style="margin:0">Updated hourly via Open-Meteo &mdash; Hail risk accuracy highest within first 3 days</div>
+        <select id="forecast-submarket" onchange="onSubmarketChange()"
+          style="background:#161b22;border:1px solid #30363d;border-radius:5px;color:#c9d1d9;font-family:inherit;font-size:12px;padding:5px 8px;cursor:pointer">
+          <option value="39.0997,-94.5786">KC Metro Center</option>
+          <option value="38.9822,-94.6708">Overland Park, KS</option>
+          <option value="38.9108,-94.3822">Lee's Summit, MO</option>
+          <option value="39.2467,-94.4190">Liberty / North KC, MO</option>
+          <option value="38.8814,-94.8197">Olathe, KS</option>
+          <option value="39.0169,-94.2816">Blue Springs, MO</option>
+          <option value="38.9631,-94.7733">Lenexa / Shawnee, KS</option>
+          <option value="38.8928,-94.5614">Grandview / Raytown, MO</option>
+          <option value="38.8167,-94.5441">Belton / Raymore, MO</option>
+          <option value="39.3478,-94.9130">Platte City / Parkville, MO</option>
+        </select>
+      </div>
       <div id="forecast-loading" style="padding:20px;color:#8b949e;font-size:13px">
         <span class="loading-spinner"></span> Loading forecast...
       </div>
@@ -1704,20 +1722,23 @@ async def dashboard():
             </div>
           </div>
           <div class="source-body">
-            <p>Owner-occupancy rate, median household income, and median home value come from the <strong>ACS 5-year estimates</strong> at the ZIP Code Tabulation Area (ZCTA) level.</p>
+            <p>Owner-occupancy rate, median household income, median home value, <strong>median year structure built</strong>, and <strong>share of pre-1980 housing stock</strong> all come from the <strong>ACS 5-year estimates</strong> at the ZIP Code Tabulation Area (ZCTA) level.</p>
             <div class="highlight">
               Endpoint: <strong>api.census.gov/data/2024/acs/acs5</strong><br>
-              Variables: B25003 (owner-occupancy), B19013 (income), B25077 (home value)<br>
+              Variables: B25003 (owner-occupancy), B19013 (income), B25077 (home value),
+              B25035 (median year built), B25034 (year-built breakdown)<br>
               No API key required &mdash; free public data
             </div>
             <table class="formula-table">
               <tr><th>Variable</th><th>What it means for leads</th></tr>
               <tr><td>Owner-occupancy %</td><td>Higher = more homeowners who can file insurance claims. Renters rarely initiate roof repairs.</td></tr>
-              <tr><td>Median income</td><td>Sweet spot $65k&ndash;$110k: middle-class homeowners file claims quickly and follow through. Very high income = slower claim cycle, very low = may not have insurance.</td></tr>
-              <tr><td>Median home value</td><td>Sweet spot $180k&ndash;$450k: homes worth insuring but not so high that owners use private adjusters who slow the process.</td></tr>
+              <tr><td>Median income</td><td>Sweet spot $50k&ndash;$120k: middle-class homeowners file claims quickly and follow through.</td></tr>
+              <tr><td>Median home value</td><td>Sweet spot $180k&ndash;$450k: homes worth insuring but not so high that owners use private adjusters.</td></tr>
+              <tr><td>Median year built</td><td>Sweet spot 1960&ndash;1985: original 3-tab shingles are highly vulnerable to hail. Many are on 2nd roof cycle with aging materials.</td></tr>
+              <tr><td>% Pre-1980</td><td>Higher % = more aging roofs per block. A neighborhood at 60% pre-1980 housing stock has far more potential leads than a newer subdivision.</td></tr>
             </table>
             <div class="caveat">
-              <strong>Limitation:</strong> The 5-year estimates pool survey responses from 2020&ndash;2024, so they reflect conditions across that range rather than a single snapshot. Home values in particular move faster than the survey captures. Treat as relative ranking rather than exact current values.
+              <strong>Limitation:</strong> The 5-year estimates pool survey responses from 2020&ndash;2024, so they reflect conditions across that range rather than a single snapshot. Home values move faster than the survey captures. Treat as relative ranking rather than exact current values.
             </div>
           </div>
         </div>
@@ -1762,13 +1783,15 @@ async def dashboard():
             <p>The <strong>Lead Score (0&ndash;100)</strong> on the Lead Scorer tab combines storm damage data with neighborhood demographics into a single number for prioritizing where to canvass.</p>
             <table class="formula-table">
               <tr><th>Component</th><th>Weight</th><th>Why</th></tr>
-              <tr><td>Damage probability</td><td>40%</td><td>Primary driver — no damage, no lead</td></tr>
-              <tr><td>Home value score</td><td>25%</td><td>Homes worth insuring in the $180k&ndash;$450k sweet spot</td></tr>
-              <tr><td>Owner-occupancy</td><td>20%</td><td>Owners file claims; renters don&apos;t</td></tr>
-              <tr><td>Income score</td><td>15%</td><td>Middle-income homeowners act fastest on claims</td></tr>
+              <tr><td>Damage probability</td><td>35%</td><td>Primary driver — no damage, no lead</td></tr>
+              <tr><td>Home value score</td><td>20%</td><td>Homes worth insuring in the $180k&ndash;$450k sweet spot</td></tr>
+              <tr><td>Owner-occupancy</td><td>15%</td><td>Owners file claims; renters don&apos;t</td></tr>
+              <tr><td>Income score</td><td>10%</td><td>Middle-income homeowners act fastest on claims</td></tr>
+              <tr><td>Home age score</td><td>15%</td><td>1960&ndash;1985 built housing = aging 3-tab shingles, highest claim rate</td></tr>
+              <tr><td>Insurance penetration</td><td>5%</td><td>More insured homes per block = easier claim conversion</td></tr>
             </table>
             <div class="highlight">
-              Score = (0.40 &times; DmgProb) + (0.25 &times; HomeValueScore) + (0.20 &times; OwnerRate) + (0.15 &times; IncomeScore)
+              Score = (0.35 &times; DmgProb) + (0.20 &times; HomeValue) + (0.15 &times; OwnerRate) + (0.10 &times; Income) + (0.15 &times; HomeAge) + (0.05 &times; Insurance)
             </div>
             <div class="caveat">
               <strong>Limitation:</strong> The weights are reasonable but not scientifically validated against actual conversion rates. If you have historical canvassing data (which streets converted vs. didn&apos;t), those conversion rates could be used to back-calibrate the weights.
@@ -1797,6 +1820,35 @@ async def dashboard():
             <p>Street names come from <strong>OpenStreetMap via Nominatim reverse geocoding</strong> — free, no API key, but rate-limited to 1 request per second. Results are cached in memory for the session.</p>
             <div class="caveat">
               <strong>Limitation:</strong> Clusters are only as good as the underlying LSR reports. If no spotters were in a neighborhood, that neighborhood won&apos;t show up as a Golden Nugget even if it was hit. Always cross-reference with the broader storm zones on the map.
+            </div>
+          </div>
+        </div>
+
+        <!-- Insurance Data -->
+        <div class="source-card">
+          <div class="source-card-header">
+            <div class="source-icon source-icon-purple" style="font-size:13px;font-weight:700;color:#bc8cff">INS</div>
+            <div>
+              <div class="source-title">Homeowners Insurance Penetration <span class="accuracy-badge acc-medium">2018&ndash;2022 data</span></div>
+              <div class="source-subtitle">US Treasury Federal Insurance Office (FIO) &mdash; home.treasury.gov</div>
+            </div>
+          </div>
+          <div class="source-body">
+            <p>The <strong>insurance penetration score</strong> in the Lead Scorer comes from the US Treasury FIO&rsquo;s public dataset on homeowners insurance markets, covering 2018&ndash;2022 ZIP-level policy counts, premiums, and incurred losses.</p>
+            <div class="highlight">
+              Source: US Treasury FIO Annual Report Supporting Data<br>
+              Variables: Policy count, written premium, incurred losses per ZIP<br>
+              Metric: Policies per housing unit (higher = more insured homes per block)<br>
+              Update cadence: Annual release &mdash; cached to disk for 30 days
+            </div>
+            <table class="formula-table">
+              <tr><th>Metric</th><th>What it means</th></tr>
+              <tr><td>Policy count / housing units</td><td>High penetration = most homeowners have active coverage = more likely to file a claim and fund a replacement</td></tr>
+              <tr><td>Loss ratio</td><td>Very high loss ratio (&gt;80%) may indicate an area where insurers are tightening coverage &mdash; slight negative modifier</td></tr>
+              <tr><td>Average premium</td><td>Shown for reference — moderate premiums indicate a stable, competitive insurance market</td></tr>
+            </table>
+            <div class="caveat">
+              <strong>Limitation:</strong> Data is from 2018&ndash;2022 and may not reflect recent market changes (many insurers have exited or reduced Midwest coverage since 2022). The insurance score carries only 5% weight because of this uncertainty. For ZIP-level Missouri-specific data, contact the Missouri Department of Insurance (DOI) at <strong>insurance.mo.gov</strong>.
             </div>
           </div>
         </div>
@@ -1845,7 +1897,8 @@ async def dashboard():
             <p><strong>Use with caution:</strong> Census demographics are ACS 2024 5-year estimates (pooled 2020–2024). Home values move faster than the survey captures, so treat them as directional rather than exact.</p>
             <p><strong>What this tool cannot tell you:</strong></p>
             <table class="formula-table">
-              <tr><td>Roof age &amp; material</td><td>Biggest factor after hail size — not in any public dataset</td></tr>
+              <tr><td>Individual roof age</td><td>Biggest factor after hail size — Census median year built is a neighborhood proxy, not per-address</td></tr>
+              <tr><td>Roof material</td><td>Impact-resistant shingles resist hail far better than 3-tab &mdash; not in any public dataset</td></tr>
               <tr><td>Prior claim history</td><td>Homes recently re-roofed may not need work</td></tr>
               <tr><td>HOA restrictions</td><td>Some neighborhoods have contractor approval requirements</td></tr>
               <tr><td>MESH radar hail data</td><td>Radar-estimated hail (MRMS MESH) not yet integrated &mdash; would improve zone accuracy</td></tr>
@@ -2082,7 +2135,7 @@ async def dashboard():
           '<span class="tier-badge tier-' + zone.tier + '">' + zone.tier + '</span>' +
         '</div>' +
         '<div class="zone-stats">' +
-          '<div class="zone-stat" style="grid-column:span 2">Likelihood<strong style="font-size:13px;color:' + dmgColor(Math.round(zone.damage_probability * 100)) + '">' + dmgLabel(Math.round(zone.damage_probability * 100)) + '</strong></div>' +
+          '<div class="zone-stat" style="grid-column:span 2">Damage Likelihood<strong style="font-size:13px;color:' + dmgColor(Math.round(zone.damage_probability * 100)) + '">' + dmgLabel(Math.round(zone.damage_probability * 100)) + '</strong></div>' +
           '<div class="zone-stat">Hail<strong>' + zone.max_hail_inches + '"</strong></div>' +
           '<div class="zone-stat">Reports<strong>' + (zone.event_count || '—') + '</strong></div>' +
         '</div>' +
@@ -2251,6 +2304,8 @@ async def dashboard():
       '<th class="numeric">Owner%</th>' +
       '<th class="numeric">Med Income</th>' +
       '<th class="numeric">Med Home Val</th>' +
+      '<th class="numeric">Yr Built</th>' +
+      '<th class="numeric">Pre-1980</th>' +
       '</tr></thead><tbody>';
 
     leads.forEach((lead, i) => {
@@ -2275,6 +2330,8 @@ async def dashboard():
         '<td class="demo-cell ' + (lead.owner_rate != null ? 'available' : '') + '">' + fmtPct(lead.owner_rate) + '</td>' +
         '<td class="demo-cell ' + (lead.median_income != null ? 'available' : '') + '">' + fmtMoney(lead.median_income) + '</td>' +
         '<td class="demo-cell ' + (lead.median_home_value != null ? 'available' : '') + '">' + fmtMoney(lead.median_home_value) + '</td>' +
+        '<td class="demo-cell ' + (lead.median_year_built != null ? 'available' : '') + '" style="text-align:right">' + (lead.median_year_built || '—') + '</td>' +
+        '<td class="demo-cell ' + (lead.pct_pre1980 != null ? 'available' : '') + '" style="text-align:right;color:' + (lead.pct_pre1980 >= 50 ? '#3fb950' : lead.pct_pre1980 >= 30 ? '#d29922' : '#8b949e') + '">' + (lead.pct_pre1980 != null ? lead.pct_pre1980 + '%' : '—') + '</td>' +
       '</tr>';
     });
 
@@ -2282,9 +2339,9 @@ async def dashboard():
 
     // Score legend
     html += '<div style="margin-top:12px;font-size:11px;color:#6e7681;line-height:1.8">' +
-      'Score = 40% damage probability + 25% home value + 20% owner-occupancy + 15% income &nbsp;|&nbsp; ' +
-      'Storm counts show how many zones hit this zip in the last 3 / 7 / 14 / 30 days &nbsp;|&nbsp; ' +
-      'Demographics: US Census ACS 5-year estimates' +
+      'Score = 35% damage prob + 20% home value + 15% owner-occupancy + 10% income + 15% home age + 5% insurance &nbsp;|&nbsp; ' +
+      'Pre-1980 % highlighted green = more aging roofs per block &nbsp;|&nbsp; ' +
+      'Demographics: US Census ACS 5-year estimates &nbsp;|&nbsp; Insurance: US Treasury FIO 2018&ndash;2022' +
     '</div>';
 
     wrap.innerHTML = html;
@@ -2494,15 +2551,25 @@ async def dashboard():
   // ---- FORECAST ----
   let forecastLoaded = false;
 
+  function onSubmarketChange() {
+    forecastLoaded = false;
+    loadForecast();
+  }
+
   async function loadForecast() {
     if (forecastLoaded) return;
     const loading = document.getElementById('forecast-loading');
     const content = document.getElementById('forecast-content');
+    loading.innerHTML = '<span class="loading-spinner"></span> Loading forecast...';
     loading.style.display = 'block';
     content.style.display = 'none';
 
+    const sel = document.getElementById('forecast-submarket');
+    const [lat, lon] = sel ? sel.value.split(',') : ['39.0997', '-94.5786'];
+    const locationName = sel ? sel.options[sel.selectedIndex].text : 'KC Metro Center';
+
     try {
-      const res = await fetch('/api/forecast');
+      const res = await fetch('/api/forecast?lat=' + lat + '&lon=' + lon);
       const data = await res.json();
       loading.style.display = 'none';
 
@@ -2512,7 +2579,7 @@ async def dashboard():
         return;
       }
 
-      renderForecast(data);
+      renderForecast(data, locationName);
       content.style.display = 'block';
       forecastLoaded = true;
     } catch (e) {
@@ -2520,7 +2587,11 @@ async def dashboard():
     }
   }
 
-  function renderForecast(data) {
+  function renderForecast(data, locationName) {
+    // Update forecast title with selected submarket
+    const titleEl = document.querySelector('#tab-forecast .forecast-title');
+    if (titleEl) titleEl.textContent = '14-Day Weather Forecast — ' + (locationName || 'KC Metro Center');
+
     // Week summary chips
     const summaryEl = document.getElementById('forecast-week-summary');
     summaryEl.innerHTML = '';
