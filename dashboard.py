@@ -12,15 +12,46 @@ import json
 import os
 import asyncio
 import secrets
+import logging
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI, Query, Request, Form
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from starlette.middleware.sessions import SessionMiddleware
 import uvicorn
 
-app = FastAPI(title="StormLeads Dashboard")
+logger = logging.getLogger("stormleads.dashboard")
+
+# ---- Auto-scan scheduler ----
+scheduler = AsyncIOScheduler()
+
+async def _auto_scan():
+    """Runs the storm pipeline automatically every 6 hours."""
+    logger.info("Auto-scan: starting scheduled pipeline run")
+    try:
+        from main import run_storm_pipeline
+        zones = await run_storm_pipeline(days_back=14)
+        logger.info(f"Auto-scan: complete — {len(zones)} zones found")
+    except Exception as e:
+        logger.error(f"Auto-scan: pipeline failed — {e}")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # On startup: run pipeline immediately if no data file, then schedule every 6 hours
+    if not DATA_FILE.exists():
+        logger.info("No data file found — running initial storm scan")
+        asyncio.create_task(_auto_scan())
+    scheduler.add_job(_auto_scan, "interval", hours=6, id="auto_scan")
+    scheduler.start()
+    logger.info("Auto-scan scheduler started — pipeline runs every 6 hours")
+    yield
+    # On shutdown
+    scheduler.shutdown()
+
+app = FastAPI(title="StormLeads Dashboard", lifespan=lifespan)
 
 # ---- Auth config (set these as environment variables in Railway) ----
 DASHBOARD_PASSWORD = os.environ.get("DASHBOARD_PASSWORD", "stormleads2024")
