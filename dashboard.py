@@ -1662,9 +1662,11 @@ async def dashboard():
       </div>
       <div id="prop-table-wrap"></div>
       <div style="margin-top:10px;font-size:11px;color:#6e7681;line-height:1.8">
-        Sorted by year built (oldest first = highest priority) &nbsp;|&nbsp;
-        Data: Jackson County MO + Johnson County KS ArcGIS public services &nbsp;|&nbsp;
-        Residential properties only &nbsp;|&nbsp; Max 2,000 per zone
+        Sorted oldest-first (highest roof replacement priority) &nbsp;|&nbsp;
+        Year built + structure value: USACE National Structure Inventory (NSI) &nbsp;|&nbsp;
+        Addresses: Jackson County MO GIS &nbsp;|&nbsp;
+        <span style="color:#3fb950">Owner-Occupied</span> = single-family (RES1) &nbsp;|&nbsp;
+        <span style="color:#f0883e">Likely Rented</span> = multi-family (RES3) &nbsp;|&nbsp; Max 500 per zone
       </div>
     </div>
   </div>
@@ -2915,7 +2917,7 @@ async def dashboard():
     const exportBtn = document.getElementById('prop-export-btn');
 
     if (!props.length) {
-      wrap.innerHTML = '<div class="scorer-empty">No residential properties found in this zone.<br>This may mean the assessor data for this area is not yet available, or the zone is outside Jackson/Johnson County.</div>';
+      wrap.innerHTML = '<div class="scorer-empty">No residential properties found in this zone.<br>Data source: USACE National Structure Inventory (NSI) + Jackson County address points.</div>';
       countEl.textContent = '';
       return;
     }
@@ -2923,40 +2925,38 @@ async def dashboard():
     countEl.textContent = props.length + ' properties';
     exportBtn.style.display = 'inline-block';
 
-    const hailDate = meta.zone_date ? new Date(meta.zone_date).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}) : '';
-    const hailSize = meta.zone_hail ? meta.zone_hail + '"' : '';
-
     let html = '<div class="scorer-table-wrap"><table class="scorer-table">';
     html += '<thead><tr>' +
       '<th>#</th>' +
       '<th>Address</th>' +
-      '<th>City</th>' +
-      '<th>County</th>' +
+      '<th>Type</th>' +
+      '<th>Owner Status</th>' +
       '<th class="numeric">Year Built</th>' +
-      '<th class="numeric">Est. Roof Age</th>' +
-      '<th class="numeric">Assessed Value</th>' +
+      '<th class="numeric">Roof Age</th>' +
+      '<th class="numeric">Struct. Value</th>' +
+      '<th class="numeric">Sq Ft</th>' +
       '<th>Priority</th>' +
       '</tr></thead><tbody>';
 
-    const currentYear = new Date().getFullYear();
     props.forEach((p, i) => {
       const yr = p.year_built;
-      const age = yr ? currentYear - yr : null;
-      const ageColor = age >= 30 ? '#f85149' : age >= 20 ? '#f0883e' : age >= 10 ? '#d29922' : '#6e7681';
-      const priority = age >= 35 ? 'Very High' : age >= 25 ? 'High' : age >= 15 ? 'Moderate' : age ? 'Lower' : '—';
-      const priColor = age >= 35 ? '#f85149' : age >= 25 ? '#f0883e' : age >= 15 ? '#d29922' : '#6e7681';
-      const val = p.assessed_value;
+      const age = p.roof_age;
+      const ageColor = p.priority_color || '#6e7681';
+      const val = p.structure_value;
       const valStr = val > 0 ? '$' + (val >= 1000 ? Math.round(val/1000) + 'k' : val) : '—';
+      const sqft = p.sqft > 0 ? p.sqft.toLocaleString() : '—';
+      const ownerColor = p.owner_status === 'Owner-Occupied' ? '#3fb950' : p.owner_status === 'Likely Rented' ? '#f0883e' : '#6e7681';
 
       html += '<tr>' +
         '<td><span class="rank-num">' + (i + 1) + '</span></td>' +
-        '<td style="font-size:12px;font-weight:500">' + (p.address || '—') + '</td>' +
-        '<td style="font-size:11px;color:#8b949e">' + (p.city || '') + ', ' + (p.state || '') + '</td>' +
-        '<td style="font-size:11px;color:#8b949e">' + (p.county || '') + '</td>' +
+        '<td style="font-size:12px;font-weight:500;max-width:200px">' + (p.address || '—') + '</td>' +
+        '<td style="font-size:11px;color:#8b949e">' + (p.occ_type || '—') + '</td>' +
+        '<td style="font-size:12px;color:' + ownerColor + ';font-weight:600">' + (p.owner_status || '—') + '</td>' +
         '<td class="numeric demo-cell ' + (yr ? 'available' : '') + '">' + (yr || '—') + '</td>' +
         '<td class="numeric" style="color:' + ageColor + ';font-weight:600">' + (age != null ? age + ' yr' : '—') + '</td>' +
         '<td class="numeric demo-cell ' + (val > 0 ? 'available' : '') + '">' + valStr + '</td>' +
-        '<td style="color:' + priColor + ';font-size:12px;font-weight:600">' + priority + '</td>' +
+        '<td class="numeric" style="color:#8b949e">' + sqft + '</td>' +
+        '<td style="color:' + ageColor + ';font-size:12px;font-weight:600">' + (p.priority || '—') + '</td>' +
       '</tr>';
     });
 
@@ -2966,13 +2966,14 @@ async def dashboard():
 
   function exportPropertiesCSV() {
     if (!currentProperties.length) return;
-    const currentYear = new Date().getFullYear();
     const zoneId = document.getElementById('prop-zone-select').value;
-    const rows = [['Rank', 'Address', 'City', 'State', 'ZIP', 'County', 'Year Built', 'Roof Age (yr)', 'Assessed Value', 'Priority']];
+    const rows = [['Rank', 'Address', 'Type', 'Owner Status', 'Year Built', 'Roof Age (yr)', 'Structure Value', 'Sq Ft', 'County', 'Priority', 'Lat', 'Lon']];
     currentProperties.forEach((p, i) => {
-      const age = p.year_built ? currentYear - p.year_built : '';
-      const priority = age >= 35 ? 'Very High' : age >= 25 ? 'High' : age >= 15 ? 'Moderate' : age ? 'Lower' : '';
-      rows.push([i + 1, p.address, p.city, p.state, p.zip, p.county, p.year_built || '', age, p.assessed_value || '', priority]);
+      rows.push([
+        i + 1, p.address, p.occ_type, p.owner_status,
+        p.year_built || '', p.roof_age || '', p.structure_value || '',
+        p.sqft || '', p.county, p.priority, p.lat, p.lon
+      ]);
     });
     const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\\n');
     const blob = new Blob([csv], {type: 'text/csv'});

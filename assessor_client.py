@@ -1,19 +1,26 @@
 """
-County assessor property data for KC metro.
+Property data for KC metro storm zones.
 
-Queries public ArcGIS REST services to get property-level data
-(address, year built, assessed value, owner type) within storm zones.
+Strategy:
+  1. USACE National Structure Inventory (NSI) — per-structure data including
+     year built, occupancy type (owner/renter), structure value, sqft.
+     Free public API, no auth required. 3,000–5,000 structures per square mile.
 
-Sources:
-  Jackson County MO — jcgis.jacksongov.org (public, no auth required)
-  Johnson County KS — open data portal (public layer)
+  2. Jackson County MO Address Points — street addresses with lat/lon.
+     Spatial-join matched to NSI points by proximity (~50m).
 
-Returns address-level leads so canvassers know exactly which houses to visit,
-ranked by estimated roof age (oldest first = highest priority).
+  3. Reverse geocoding fallback (Nominatim) for any NSI point with no
+     address match.
+
+NSI occupancy types we care about:
+  RES1-*  = single-family residential → owner-occupied lead
+  RES2    = manufactured/mobile home  → owner-occupied lead
+  RES3A/B = multi-family (≤10 / >10 units) → likely rented, lower priority
+  COM/IND/GOV/REL = skip
 """
 import logging
 import math
-from typing import Any
+from collections import defaultdict
 
 import httpx
 
@@ -21,339 +28,307 @@ logger = logging.getLogger(__name__)
 
 HEADERS = {"User-Agent": "StormLeads/1.0 (contact@stormleads.com)"}
 
-# Jackson County MO — AssessorAnalysis service (public)
-JACKSON_URL = (
-    "https://jcgis.jacksongov.org/arcgis/rest/services/"
-    "AssessorAnalysis/Assessor_Neighborhood_and_Region_Analysis/MapServer/5/query"
-)
+# NSI — POST a GeoJSON polygon, get back structures with year built etc.
+NSI_URL = "https://nsi.sec.usace.army.mil/nsiapi/structures"
 
-# Jackson County MO — Parcel points (backup, has more address fields)
-JACKSON_PARCEL_URL = (
+# Jackson County MO address points (public ArcGIS, no auth)
+JCMO_ADDR_URL = (
     "https://jcgis.jacksongov.org/arcgis/rest/services/"
     "ParcelViewer/ParcelsPointsAscendBackup/FeatureServer/0/query"
 )
 
-# Johnson County KS — public open data portal parcel layer
-JOHNSON_URL = (
-    "https://services1.arcgis.com/fBc8EJBxQRMcHlei/arcgis/rest/services/"
-    "JoCo_Parcels/FeatureServer/0/query"
-)
+# Nominatim reverse geocode (fallback, 1 req/sec rate limit)
+NOMINATIM_URL = "https://nominatim.openstreetmap.org/reverse"
 
-MAX_RECORDS = 2000
+# Max NSI structures to return per zone
+MAX_RESULTS = 500
 
-# Common year-built field names across different ArcGIS services
-YEAR_BUILT_FIELDS = (
-    "YEAR_BUILT", "YR_BLT", "YearBuilt", "year_built",
-    "BUILT", "EFFYR", "EFF_YR", "EFFECT_YR", "YEAR_EFFEC",
-    "ImprovementYear", "YEAR_IMPR",
-)
+# Occupancy type → owner status label
+def _owner_status(occtype: str) -> str:
+    ot = occtype.upper()
+    if ot.startswith("RES1") or ot.startswith("RES2"):
+        return "Owner-Occupied"
+    if ot.startswith("RES3"):
+        return "Likely Rented"
+    return "Unknown"
 
-# Common owner-type exclusion patterns (skip commercial/industrial)
-SKIP_TYPES = ("commercial", "industrial", "exempt", "government", "utility")
+def _occ_label(occtype: str) -> str:
+    ot = occtype.upper()
+    if ot.startswith("RES1-1S"):
+        return "Single Family 1-Story"
+    if ot.startswith("RES1-2S"):
+        return "Single Family 2-Story"
+    if ot.startswith("RES1-3S"):
+        return "Single Family 3-Story"
+    if ot.startswith("RES1"):
+        return "Single Family"
+    if ot.startswith("RES2"):
+        return "Mobile / Manufactured"
+    if ot.startswith("RES3A"):
+        return "Multi-Family (small)"
+    if ot.startswith("RES3B"):
+        return "Multi-Family (large)"
+    return occtype
+
+def _is_residential(occtype: str) -> bool:
+    ot = occtype.upper()
+    return ot.startswith("RES1") or ot.startswith("RES2") or ot.startswith("RES3A")
 
 
 class AssessorClient:
-    """Fetches property-level data from county assessor ArcGIS services."""
 
     async def get_properties_in_zone(self, zone: dict) -> list[dict]:
         """
-        Return property records for addresses within a storm zone.
+        Return property records for residential structures within a storm zone.
 
-        Zone dict should have: center (lat/lon), radius_miles, zip_codes.
-        Properties are sorted by year built (oldest first = highest priority).
+        Returns list sorted oldest-first (highest roof-replacement priority).
+        Each dict has: address, year_built, roof_age, owner_status, occ_type,
+                       structure_value, sqft, lat, lon, county, priority
         """
         center = zone.get("center", {})
         lat = center.get("lat", 39.0997)
         lon = center.get("lon", -94.5786)
         radius = zone.get("radius_miles", 3.0)
 
-        # Build bounding box from center + radius
+        # 1. Fetch NSI structures (year built, type, value)
+        nsi_points = await self._fetch_nsi(lat, lon, radius)
+        if not nsi_points:
+            logger.warning("NSI returned no structures for zone")
+            return []
+
+        # 2. Fetch county address points for the same area
         bbox = _radius_to_bbox(lat, lon, radius)
+        addr_index = await self._fetch_address_index(bbox)
 
-        properties: list[dict] = []
+        # 3. Match each NSI point to nearest street address
+        properties = []
+        current_year = 2026
+        for pt in nsi_points:
+            if not _is_residential(pt["occtype"]):
+                continue
+            if not _in_circle(pt["lat"], pt["lon"], lat, lon, radius):
+                continue
 
-        # Jackson County MO — try primary service then backup
-        jc_props = await self._fetch_jackson(bbox)
-        properties.extend(jc_props)
+            address = _nearest_address(pt["lat"], pt["lon"], addr_index)
+            yr = pt.get("year_built")
+            roof_age = current_year - yr if yr else None
+            owner_status = _owner_status(pt["occtype"])
 
-        # Johnson County KS — try open data portal
-        jo_props = await self._fetch_johnson(bbox)
-        properties.extend(jo_props)
+            # Skip large multi-family if over 50% of zone seems rented (keep RES1/RES2 focus)
+            if pt["occtype"].upper().startswith("RES3B"):
+                continue
 
-        # Filter to only residential properties inside the actual circle
-        properties = [
-            p for p in properties
-            if _in_circle(p["lat"], p["lon"], lat, lon, radius)
-            and p.get("property_type", "").lower() not in SKIP_TYPES
-        ]
+            priority = _priority_label(roof_age)
 
-        # Sort oldest first (most likely to need roof replacement)
+            properties.append({
+                "address": address or "Address unknown",
+                "lat": pt["lat"],
+                "lon": pt["lon"],
+                "year_built": yr,
+                "roof_age": roof_age,
+                "owner_status": owner_status,
+                "occ_type": _occ_label(pt["occtype"]),
+                "structure_value": pt.get("structure_value"),
+                "sqft": pt.get("sqft"),
+                "county": _county(pt["lon"]),
+                "priority": priority,
+                "priority_color": _priority_color(roof_age),
+            })
+
+        # Sort oldest first
         properties.sort(key=lambda p: (p.get("year_built") or 9999))
 
-        # Add rank
-        for i, p in enumerate(properties):
+        # Add rank and cap at MAX_RESULTS
+        for i, p in enumerate(properties[:MAX_RESULTS]):
             p["rank"] = i + 1
 
         logger.info(
             f"Assessor: {len(properties)} residential properties in zone "
-            f"{zone.get('zone_id', '?')} (r={radius:.1f}mi)"
+            f"{zone.get('zone_id','?')} — {len(nsi_points)} NSI structures queried"
         )
-        return properties
+        return properties[:MAX_RESULTS]
 
-    async def _fetch_jackson(self, bbox: dict) -> list[dict]:
-        """Query Jackson County MO ArcGIS service."""
-        params = _arcgis_bbox_params(bbox)
-        params["outFields"] = "*"  # request all fields to discover year_built
-        params["resultRecordCount"] = MAX_RECORDS
+    async def _fetch_nsi(self, lat: float, lon: float, radius_miles: float) -> list[dict]:
+        """POST a circle polygon to NSI and return residential structure list."""
+        polygon = _circle_polygon(lat, lon, radius_miles)
+        body = {
+            "type": "FeatureCollection",
+            "features": [{
+                "type": "Feature",
+                "geometry": {"type": "Polygon", "coordinates": [polygon]},
+                "properties": {},
+            }],
+        }
+        try:
+            async with httpx.AsyncClient(headers=HEADERS, timeout=40.0) as client:
+                resp = await client.post(NSI_URL, json=body)
+                resp.raise_for_status()
+                data = resp.json()
+        except Exception as e:
+            logger.warning(f"NSI fetch failed: {e}")
+            return []
 
-        # Try primary AssessorAnalysis service
-        data = await _arcgis_query(JACKSON_URL, params)
-        if data:
-            props = _parse_jackson(data)
-            if props:
-                return props
-
-        # Fallback: parcel points service
-        data = await _arcgis_query(JACKSON_PARCEL_URL, params)
-        if data:
-            return _parse_jackson_parcel(data)
-
-        return []
-
-    async def _fetch_johnson(self, bbox: dict) -> list[dict]:
-        """Query Johnson County KS public parcel layer."""
-        params = _arcgis_bbox_params(bbox)
-        params["outFields"] = "*"
-        params["resultRecordCount"] = MAX_RECORDS
-
-        data = await _arcgis_query(JOHNSON_URL, params)
-        if data:
-            return _parse_johnson(data)
-        return []
-
-
-# ---- ArcGIS helpers ----
-
-def _arcgis_bbox_params(bbox: dict) -> dict:
-    """Standard ArcGIS REST query params for a bounding box in WGS84."""
-    return {
-        "geometry": f"{bbox['lon_min']},{bbox['lat_min']},{bbox['lon_max']},{bbox['lat_max']}",
-        "geometryType": "esriGeometryEnvelope",
-        "inSR": "4326",
-        "outSR": "4326",
-        "spatialRel": "esriSpatialRelIntersects",
-        "returnGeometry": "true",
-        "f": "json",
-    }
-
-
-async def _arcgis_query(url: str, params: dict) -> list[dict] | None:
-    """Make an ArcGIS feature query and return features list, or None on error."""
-    try:
-        async with httpx.AsyncClient(headers=HEADERS, timeout=30.0) as client:
-            resp = await client.get(url, params=params)
-            resp.raise_for_status()
-            data = resp.json()
-        features = data.get("features", [])
-        if features is None:
-            return None
-        return features
-    except Exception as e:
-        logger.warning(f"ArcGIS query failed ({url}): {e}")
-        return None
-
-
-def _parse_jackson(features: list[dict]) -> list[dict]:
-    """Parse Jackson County MO AssessorAnalysis features into property dicts."""
-    props = []
-    for f in features:
-        attrs = f.get("attributes", {})
-        geo = f.get("geometry", {})
-
-        address = (
-            attrs.get("SitusAddress") or
-            attrs.get("FULLADDR") or
-            attrs.get("situs_address") or ""
-        ).strip()
-        if not address:
-            continue
-
-        city = (attrs.get("SitusCity") or attrs.get("situs_city") or "").strip()
-        state = "MO"
-        zip_code = str(attrs.get("SitusZipCode") or attrs.get("ZIP") or "").strip()
-        assessed = int(attrs.get("AssessedValue") or attrs.get("ASSESSED_VALUE") or 0)
-        market = int(attrs.get("MarketValue") or attrs.get("MARKET_VALUE") or 0)
-        owner = (attrs.get("owner") or attrs.get("OWNER") or "").strip()
-
-        year_built = _find_year_built(attrs)
-        lat, lon = _extract_coords(geo, attrs)
-        ptype = _infer_property_type(attrs, assessed)
-
-        if not lat or not lon:
-            continue
-
-        props.append({
-            "address": address,
-            "city": city,
-            "state": state,
-            "zip": zip_code,
-            "county": "Jackson",
-            "lat": lat,
-            "lon": lon,
-            "year_built": year_built,
-            "assessed_value": market or assessed,
-            "owner": owner,
-            "property_type": ptype,
-        })
-    return props
-
-
-def _parse_jackson_parcel(features: list[dict]) -> list[dict]:
-    """Parse Jackson County parcel point service features."""
-    props = []
-    for f in features:
-        attrs = f.get("attributes", {})
-        geo = f.get("geometry", {})
-
-        address = (attrs.get("FULLADDR") or attrs.get("SitusAddress") or "").strip()
-        if not address:
-            continue
-
-        lat, lon = _extract_coords(geo, attrs)
-        if not lat or not lon:
-            continue
-
-        props.append({
-            "address": address,
-            "city": (attrs.get("MUNICIPALITY") or attrs.get("CITY") or "").strip(),
-            "state": "MO",
-            "zip": str(attrs.get("ZIP") or "").strip(),
-            "county": "Jackson",
-            "lat": lat,
-            "lon": lon,
-            "year_built": _find_year_built(attrs),
-            "assessed_value": 0,
-            "owner": "",
-            "property_type": "residential",
-        })
-    return props
-
-
-def _parse_johnson(features: list[dict]) -> list[dict]:
-    """Parse Johnson County KS public parcel features."""
-    props = []
-    for f in features:
-        attrs = f.get("attributes", {})
-        geo = f.get("geometry", {})
-
-        # Johnson County field names vary by service version
-        address = (
-            attrs.get("SITE_ADDR") or
-            attrs.get("SiteAddress") or
-            attrs.get("FULLADDR") or
-            attrs.get("ADDRESS") or ""
-        ).strip()
-        if not address:
-            continue
-
-        city = (attrs.get("SITE_CITY") or attrs.get("CITY") or "Overland Park").strip()
-        zip_code = str(attrs.get("SITE_ZIP") or attrs.get("ZIP") or "").strip()
-        assessed = int(attrs.get("ASSESSED_VALUE") or attrs.get("TotalAssessed") or 0)
-        owner = (attrs.get("OWNER_NAME") or attrs.get("OWNER") or "").strip()
-        year_built = _find_year_built(attrs)
-        lat, lon = _extract_coords(geo, attrs)
-        ptype = _infer_property_type(attrs, assessed)
-
-        if not lat or not lon:
-            continue
-
-        props.append({
-            "address": address,
-            "city": city,
-            "state": "KS",
-            "zip": zip_code,
-            "county": "Johnson",
-            "lat": lat,
-            "lon": lon,
-            "year_built": year_built,
-            "assessed_value": assessed,
-            "owner": owner,
-            "property_type": ptype,
-        })
-    return props
-
-
-def _find_year_built(attrs: dict[str, Any]) -> int | None:
-    """Search an attributes dict for a year-built field."""
-    for field in YEAR_BUILT_FIELDS:
-        val = attrs.get(field)
-        if val:
-            try:
-                yr = int(float(str(val)))
-                if 1880 <= yr <= 2026:
-                    return yr
-            except (ValueError, TypeError):
+        results = []
+        for f in data.get("features", []):
+            p = f.get("properties", {})
+            geo = f.get("geometry", {})
+            coords = geo.get("coordinates", [None, None]) if geo.get("type") == "Point" else [None, None]
+            x = p.get("x") or (coords[0] if coords else None)
+            y = p.get("y") or (coords[1] if coords else None)
+            if not x or not y:
                 continue
-    return None
+            yr = p.get("med_yr_blt")
+            results.append({
+                "lat": round(float(y), 5),
+                "lon": round(float(x), 5),
+                "occtype": p.get("occtype", ""),
+                "year_built": int(yr) if yr and 1850 < float(yr) < 2026 else None,
+                "structure_value": round(float(p.get("val_struct") or 0)),
+                "sqft": round(float(p.get("sqft") or 0)),
+            })
+        return results
+
+    async def _fetch_address_index(self, bbox: dict) -> dict:
+        """
+        Fetch Jackson County address points and build a spatial grid index
+        keyed by (round(lat,3), round(lon,3)) for fast nearest-neighbor lookup.
+        """
+        params = {
+            "geometry": f"{bbox['lon_min']},{bbox['lat_min']},{bbox['lon_max']},{bbox['lat_max']}",
+            "geometryType": "esriGeometryEnvelope",
+            "inSR": "4326",
+            "outSR": "4326",
+            "spatialRel": "esriSpatialRelIntersects",
+            "outFields": "FULLADDR,MUNICIPALITY,ZIP,XCOORD,YCOORD,StateAbbrv",
+            "returnGeometry": "true",
+            "resultRecordCount": 5000,
+            "f": "json",
+        }
+        index: dict[tuple, list] = defaultdict(list)
+        # Paginate — service returns max 2000 per request, zone may have 10k+ addresses
+        offset = 0
+        page_size = 2000
+        pages_fetched = 0
+        try:
+            async with httpx.AsyncClient(headers=HEADERS, timeout=30.0) as client:
+                while pages_fetched < 5:  # cap at 10k addresses total
+                    params["resultRecordCount"] = page_size
+                    params["resultOffset"] = offset
+                    resp = await client.get(JCMO_ADDR_URL, params=params)
+                    resp.raise_for_status()
+                    data = resp.json()
+                    features = data.get("features", [])
+                    for f in features:
+                        attrs = f.get("attributes", {})
+                        geo = f.get("geometry", {})
+                        # Use geometry.x/y (outSR=4326 converts these to WGS84)
+                        # XCOORD/YCOORD attributes are in State Plane feet — don't use
+                        alon = float(geo.get("x") or 0)
+                        alat = float(geo.get("y") or 0)
+                        if not (38 < alat < 41 and -96 < alon < -93):
+                            continue
+                        addr = (attrs.get("FULLADDR") or "").strip()
+                        city = (attrs.get("MUNICIPALITY") or "").strip().title()
+                        state = (attrs.get("StateAbbrv") or "MO").strip()
+                        if not addr:
+                            continue
+                        entry = {"addr": addr, "city": city, "state": state, "lat": alat, "lon": alon}
+                        key = (round(alat, 3), round(alon, 3))
+                        index[key].append(entry)
+                    pages_fetched += 1
+                    offset += page_size
+                    if not data.get("exceededTransferLimit"):
+                        break  # no more pages
+            total = sum(len(v) for v in index.values())
+            logger.info(f"Address index: {total} points across {pages_fetched} page(s)")
+        except Exception as e:
+            logger.warning(f"Address index fetch failed: {e}")
+        return dict(index)
 
 
-def _extract_coords(geo: dict, attrs: dict) -> tuple[float | None, float | None]:
-    """Extract lat/lon from ArcGIS geometry or attribute coordinate fields."""
-    # GeoJSON-style point
-    if geo.get("x") is not None and geo.get("y") is not None:
-        x, y = float(geo["x"]), float(geo["y"])
-        # Sanity check: must be in continental US lat/lon range
-        if -130 < x < -60 and 25 < y < 50:
-            return round(y, 5), round(x, 5)
+# ---- Helpers ----
 
-    # Attribute fields (XCOORD/YCOORD or LAT/LON)
-    for lat_f, lon_f in [("LAT", "LON"), ("YCOORD", "XCOORD"), ("latitude", "longitude")]:
-        if attrs.get(lat_f) and attrs.get(lon_f):
-            try:
-                lat = float(attrs[lat_f])
-                lon = float(attrs[lon_f])
-                if 25 < lat < 50 and -130 < lon < -60:
-                    return round(lat, 5), round(lon, 5)
-            except (ValueError, TypeError):
-                continue
+def _nearest_address(lat: float, lon: float, index: dict) -> str | None:
+    """Find the nearest street address in the grid index within ~100m."""
+    best_dist = 999.0
+    best_addr = None
 
-    return None, None
+    rlat = round(lat, 3)
+    rlon = round(lon, 3)
+    step = 0.001  # ~100m grid
 
+    for dlat in (-step, 0, step):
+        for dlon in (-step, 0, step):
+            key = (round(rlat + dlat, 3), round(rlon + dlon, 3))
+            for entry in index.get(key, []):
+                d = _dist_miles(lat, lon, entry["lat"], entry["lon"])
+                if d < best_dist:
+                    best_dist = d
+                    city = entry.get("city", "")
+                    state = entry.get("state", "MO")
+                    best_addr = entry["addr"] + (f", {city}" if city else "") + f", {state}"
 
-def _infer_property_type(attrs: dict, assessed_value: int) -> str:
-    """Guess residential vs commercial from attribute fields."""
-    for field in ("PROPERTY_TYPE", "PropertyType", "LandUse", "USE_CODE", "CLASS"):
-        val = str(attrs.get(field) or "").lower()
-        for skip in SKIP_TYPES:
-            if skip in val:
-                return skip
-        if any(t in val for t in ("residential", "single", "sfr", "dwelling")):
-            return "residential"
-    # Assessed value heuristic: very high = likely commercial
-    if assessed_value > 1_000_000:
-        return "commercial"
-    return "residential"
+    return best_addr if best_dist < 0.1 else None  # within ~0.1 mile
 
 
-# ---- Geometry helpers ----
+def _priority_label(roof_age: int | None) -> str:
+    if roof_age is None:
+        return "Unknown"
+    if roof_age >= 35:
+        return "Very High"
+    if roof_age >= 25:
+        return "High"
+    if roof_age >= 15:
+        return "Moderate"
+    return "Lower"
+
+
+def _priority_color(roof_age: int | None) -> str:
+    if roof_age is None:
+        return "#6e7681"
+    if roof_age >= 35:
+        return "#f85149"
+    if roof_age >= 25:
+        return "#f0883e"
+    if roof_age >= 15:
+        return "#d29922"
+    return "#6e7681"
+
+
+def _county(lon: float) -> str:
+    """Rough county determination by longitude."""
+    return "Johnson, KS" if lon < -94.60 else "Jackson, MO"
+
 
 def _radius_to_bbox(lat: float, lon: float, radius_miles: float) -> dict:
-    """Convert center + radius to a bounding box (with 20% padding)."""
-    pad = radius_miles * 1.2
+    pad = radius_miles * 1.1
     lat_deg = pad / 69.0
     lon_deg = pad / (69.0 * math.cos(math.radians(lat)))
     return {
-        "lat_min": lat - lat_deg,
-        "lat_max": lat + lat_deg,
-        "lon_min": lon - lon_deg,
-        "lon_max": lon + lon_deg,
+        "lat_min": lat - lat_deg, "lat_max": lat + lat_deg,
+        "lon_min": lon - lon_deg, "lon_max": lon + lon_deg,
     }
 
 
 def _in_circle(lat: float, lon: float, clat: float, clon: float, radius_miles: float) -> bool:
-    """Return True if (lat, lon) is within radius_miles of (clat, clon)."""
-    R = 3958.8  # Earth radius in miles
-    dlat = math.radians(lat - clat)
-    dlon = math.radians(lon - clon)
-    a = math.sin(dlat / 2) ** 2 + math.cos(math.radians(clat)) * math.cos(math.radians(lat)) * math.sin(dlon / 2) ** 2
-    return 2 * R * math.asin(math.sqrt(a)) <= radius_miles
+    return _dist_miles(lat, lon, clat, clon) <= radius_miles
+
+
+def _dist_miles(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    R = 3958.8
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = math.sin(dlat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2) ** 2
+    return 2 * R * math.asin(math.sqrt(a))
+
+
+def _circle_polygon(lat: float, lon: float, radius_miles: float, n_points: int = 32) -> list:
+    """Generate a polygon approximating a circle for the NSI POST body."""
+    R_earth = 3958.8
+    coords = []
+    for i in range(n_points + 1):
+        angle = math.radians(360 * i / n_points)
+        dlat = (radius_miles / R_earth) * math.cos(angle)
+        dlon = (radius_miles / R_earth) * math.sin(angle) / math.cos(math.radians(lat))
+        coords.append([round(lon + math.degrees(dlon), 5), round(lat + math.degrees(dlat), 5)])
+    return coords
