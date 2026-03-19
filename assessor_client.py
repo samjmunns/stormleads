@@ -6,11 +6,10 @@ Strategy:
      year built, occupancy type (owner/renter), structure value, sqft.
      Free public API, no auth required. 3,000–5,000 structures per square mile.
 
-  2. Jackson County MO Address Points — street addresses with lat/lon.
-     Spatial-join matched to NSI points by proximity (~50m).
-
-  3. Reverse geocoding fallback (Nominatim) for any NSI point with no
-     address match.
+  2. Nominatim reverse geocoding — converts NSI lat/lon to street addresses.
+     Results are cached to disk so each address is only looked up once.
+     Covers all KC metro counties (Jackson/Clay/Platte MO, Johnson/Wyandotte KS).
+     Max 3 concurrent requests; results cached to data/address_cache.json.
 
 NSI occupancy types we care about:
   RES1-*  = single-family residential → owner-occupied lead
@@ -18,9 +17,11 @@ NSI occupancy types we care about:
   RES3A/B = multi-family (≤10 / >10 units) → likely rented, lower priority
   COM/IND/GOV/REL = skip
 """
+import asyncio
+import json
 import logging
 import math
-from collections import defaultdict
+from pathlib import Path
 
 import httpx
 
@@ -31,17 +32,44 @@ HEADERS = {"User-Agent": "StormLeads/1.0 (contact@stormleads.com)"}
 # NSI — POST a GeoJSON polygon, get back structures with year built etc.
 NSI_URL = "https://nsi.sec.usace.army.mil/nsiapi/structures"
 
-# Jackson County MO address points (public ArcGIS, no auth)
-JCMO_ADDR_URL = (
-    "https://jcgis.jacksongov.org/arcgis/rest/services/"
-    "ParcelViewer/ParcelsPointsAscendBackup/FeatureServer/0/query"
-)
-
-# Nominatim reverse geocode (fallback, 1 req/sec rate limit)
+# Nominatim reverse geocoding (OSM-based, free, no key required)
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/reverse"
 
 # Max NSI structures to return per zone
 MAX_RESULTS = 500
+
+# Max addresses to resolve per zone via Nominatim (rest show lat/lon)
+# Oldest/highest-priority leads are resolved first; cache fills over time.
+MAX_GEOCODE = 30
+
+# Disk cache for lat/lon → address lookups
+ADDR_CACHE_FILE = Path("data/address_cache.json")
+
+# Module-level cache (loaded once at import)
+_addr_cache: dict = {}
+
+
+def _load_cache() -> None:
+    global _addr_cache
+    try:
+        if ADDR_CACHE_FILE.exists():
+            _addr_cache = json.loads(ADDR_CACHE_FILE.read_text())
+            logger.info(f"Address cache loaded: {len(_addr_cache)} entries")
+    except Exception as e:
+        logger.warning(f"Address cache load failed: {e}")
+        _addr_cache = {}
+
+
+def _save_cache() -> None:
+    try:
+        ADDR_CACHE_FILE.parent.mkdir(exist_ok=True)
+        ADDR_CACHE_FILE.write_text(json.dumps(_addr_cache))
+    except Exception as e:
+        logger.warning(f"Address cache save failed: {e}")
+
+
+_load_cache()
+
 
 # Occupancy type → owner status label
 def _owner_status(occtype: str) -> str:
@@ -51,6 +79,7 @@ def _owner_status(occtype: str) -> str:
     if ot.startswith("RES3"):
         return "Likely Rented"
     return "Unknown"
+
 
 def _occ_label(occtype: str) -> str:
     ot = occtype.upper()
@@ -70,6 +99,7 @@ def _occ_label(occtype: str) -> str:
         return "Multi-Family (large)"
     return occtype
 
+
 def _is_residential(occtype: str) -> bool:
     ot = occtype.upper()
     return ot.startswith("RES1") or ot.startswith("RES2") or ot.startswith("RES3A")
@@ -84,11 +114,15 @@ class AssessorClient:
         Returns list sorted oldest-first (highest roof-replacement priority).
         Each dict has: address, year_built, roof_age, owner_status, occ_type,
                        structure_value, sqft, lat, lon, county, priority
+
+        Uses epicenter + report_radius_miles (tight hail circle) rather than
+        the larger NWS warning zone radius to keep queries fast and accurate.
         """
-        center = zone.get("center", {})
-        lat = center.get("lat", 39.0997)
-        lon = center.get("lon", -94.5786)
-        radius = zone.get("radius_miles", 3.0)
+        epicenter = zone.get("epicenter") or zone.get("center", {})
+        lat = epicenter.get("lat", 39.0997)
+        lon = epicenter.get("lon", -94.5786)
+        # report_radius_miles is the tight 75th-pct hail footprint, cap at 8mi
+        radius = min(zone.get("report_radius_miles") or zone.get("radius_miles", 3.0), 8.0)
 
         # 1. Fetch NSI structures (year built, type, value)
         nsi_points = await self._fetch_nsi(lat, lon, radius)
@@ -96,57 +130,65 @@ class AssessorClient:
             logger.warning("NSI returned no structures for zone")
             return []
 
-        # 2. Fetch county address points for the same area
-        bbox = _radius_to_bbox(lat, lon, radius)
-        addr_index = await self._fetch_address_index(bbox)
-
-        # 3. Match each NSI point to nearest street address
-        properties = []
+        # 2. Filter to residential points inside the circle
         current_year = 2026
+        candidates = []
         for pt in nsi_points:
             if not _is_residential(pt["occtype"]):
                 continue
-            if not _in_circle(pt["lat"], pt["lon"], lat, lon, radius):
-                continue
-
-            address = _nearest_address(pt["lat"], pt["lon"], addr_index)
-            yr = pt.get("year_built")
-            roof_age = current_year - yr if yr else None
-            owner_status = _owner_status(pt["occtype"])
-
-            # Skip large multi-family if over 50% of zone seems rented (keep RES1/RES2 focus)
             if pt["occtype"].upper().startswith("RES3B"):
                 continue
-
-            priority = _priority_label(roof_age)
-
-            properties.append({
-                "address": address or "Address unknown",
+            if not _in_circle(pt["lat"], pt["lon"], lat, lon, radius):
+                continue
+            yr = pt.get("year_built")
+            candidates.append({
                 "lat": pt["lat"],
                 "lon": pt["lon"],
                 "year_built": yr,
-                "roof_age": roof_age,
-                "owner_status": owner_status,
+                "roof_age": current_year - yr if yr else None,
+                "owner_status": _owner_status(pt["occtype"]),
                 "occ_type": _occ_label(pt["occtype"]),
                 "structure_value": pt.get("structure_value"),
                 "sqft": pt.get("sqft"),
-                "county": _county(pt["lon"]),
-                "priority": priority,
-                "priority_color": _priority_color(roof_age),
+                "county": _county(pt["lon"], pt["lat"]),
+                "priority": _priority_label(current_year - yr if yr else None),
+                "priority_color": _priority_color(current_year - yr if yr else None),
             })
 
-        # Sort oldest first
-        properties.sort(key=lambda p: (p.get("year_built") or 9999))
+        # Sort oldest first before geocoding so we resolve the most valuable leads
+        candidates.sort(key=lambda p: (p.get("year_built") or 9999))
 
-        # Add rank and cap at MAX_RESULTS
-        for i, p in enumerate(properties[:MAX_RESULTS]):
+        # 3. Resolve addresses: check cache first, then batch Nominatim for uncached
+        to_geocode = []
+        for p in candidates[:MAX_RESULTS]:
+            key = _cache_key(p["lat"], p["lon"])
+            if key not in _addr_cache:
+                to_geocode.append(p)
+            if len(to_geocode) >= MAX_GEOCODE:
+                break
+
+        if to_geocode:
+            await self._batch_geocode(to_geocode)
+            _save_cache()
+
+        # 4. Assign addresses from cache
+        properties = []
+        for p in candidates[:MAX_RESULTS]:
+            key = _cache_key(p["lat"], p["lon"])
+            cached = _addr_cache.get(key)
+            p["address"] = cached if cached else f"{p['lat']:.4f}, {p['lon']:.4f}"
+            properties.append(p)
+
+        # Add rank
+        for i, p in enumerate(properties):
             p["rank"] = i + 1
 
         logger.info(
             f"Assessor: {len(properties)} residential properties in zone "
-            f"{zone.get('zone_id','?')} — {len(nsi_points)} NSI structures queried"
+            f"{zone.get('zone_id','?')} — {len(nsi_points)} NSI structures queried, "
+            f"{len(to_geocode)} new addresses resolved"
         )
-        return properties[:MAX_RESULTS]
+        return properties
 
     async def _fetch_nsi(self, lat: float, lon: float, radius_miles: float) -> list[dict]:
         """POST a circle polygon to NSI and return residential structure list."""
@@ -188,87 +230,53 @@ class AssessorClient:
             })
         return results
 
-    async def _fetch_address_index(self, bbox: dict) -> dict:
+    async def _batch_geocode(self, properties: list[dict]) -> None:
         """
-        Fetch Jackson County address points and build a spatial grid index
-        keyed by (round(lat,3), round(lon,3)) for fast nearest-neighbor lookup.
+        Reverse geocode up to MAX_GEOCODE properties via Nominatim.
+        Uses a semaphore to cap concurrency at 3 simultaneous requests.
+        Results are written directly into _addr_cache.
         """
-        params = {
-            "geometry": f"{bbox['lon_min']},{bbox['lat_min']},{bbox['lon_max']},{bbox['lat_max']}",
-            "geometryType": "esriGeometryEnvelope",
-            "inSR": "4326",
-            "outSR": "4326",
-            "spatialRel": "esriSpatialRelIntersects",
-            "outFields": "FULLADDR,MUNICIPALITY,ZIP,XCOORD,YCOORD,StateAbbrv",
-            "returnGeometry": "true",
-            "resultRecordCount": 5000,
-            "f": "json",
-        }
-        index: dict[tuple, list] = defaultdict(list)
-        # Paginate — service returns max 2000 per request, zone may have 10k+ addresses
-        offset = 0
-        page_size = 2000
-        pages_fetched = 0
-        try:
-            async with httpx.AsyncClient(headers=HEADERS, timeout=30.0) as client:
-                while pages_fetched < 5:  # cap at 10k addresses total
-                    params["resultRecordCount"] = page_size
-                    params["resultOffset"] = offset
-                    resp = await client.get(JCMO_ADDR_URL, params=params)
+        semaphore = asyncio.Semaphore(5)
+
+        async def _one(p: dict, client: httpx.AsyncClient) -> None:
+            key = _cache_key(p["lat"], p["lon"])
+            async with semaphore:
+                try:
+                    resp = await client.get(NOMINATIM_URL, params={
+                        "lat": p["lat"],
+                        "lon": p["lon"],
+                        "format": "json",
+                        "zoom": 18,
+                        "addressdetails": 1,
+                    })
                     resp.raise_for_status()
                     data = resp.json()
-                    features = data.get("features", [])
-                    for f in features:
-                        attrs = f.get("attributes", {})
-                        geo = f.get("geometry", {})
-                        # Use geometry.x/y (outSR=4326 converts these to WGS84)
-                        # XCOORD/YCOORD attributes are in State Plane feet — don't use
-                        alon = float(geo.get("x") or 0)
-                        alat = float(geo.get("y") or 0)
-                        if not (38 < alat < 41 and -96 < alon < -93):
-                            continue
-                        addr = (attrs.get("FULLADDR") or "").strip()
-                        city = (attrs.get("MUNICIPALITY") or "").strip().title()
-                        state = (attrs.get("StateAbbrv") or "MO").strip()
-                        if not addr:
-                            continue
-                        entry = {"addr": addr, "city": city, "state": state, "lat": alat, "lon": alon}
-                        key = (round(alat, 3), round(alon, 3))
-                        index[key].append(entry)
-                    pages_fetched += 1
-                    offset += page_size
-                    if not data.get("exceededTransferLimit"):
-                        break  # no more pages
-            total = sum(len(v) for v in index.values())
-            logger.info(f"Address index: {total} points across {pages_fetched} page(s)")
-        except Exception as e:
-            logger.warning(f"Address index fetch failed: {e}")
-        return dict(index)
+                    a = data.get("address", {})
+                    num = a.get("house_number", "")
+                    road = a.get("road", "")
+                    city = a.get("city") or a.get("town") or a.get("suburb", "")
+                    state = a.get("state", "")
+                    if road:
+                        addr = (f"{num} " if num else "") + road
+                        if city:
+                            addr += f", {city}"
+                        if state:
+                            addr += f", {state}"
+                        _addr_cache[key] = addr
+                    else:
+                        _addr_cache[key] = None
+                except Exception as e:
+                    logger.debug(f"Nominatim failed for {p['lat']},{p['lon']}: {e}")
+                    _addr_cache[key] = None
+
+        async with httpx.AsyncClient(headers=HEADERS, timeout=10.0) as client:
+            await asyncio.gather(*[_one(p, client) for p in properties])
 
 
 # ---- Helpers ----
 
-def _nearest_address(lat: float, lon: float, index: dict) -> str | None:
-    """Find the nearest street address in the grid index within ~100m."""
-    best_dist = 999.0
-    best_addr = None
-
-    rlat = round(lat, 3)
-    rlon = round(lon, 3)
-    step = 0.001  # ~100m grid
-
-    for dlat in (-step, 0, step):
-        for dlon in (-step, 0, step):
-            key = (round(rlat + dlat, 3), round(rlon + dlon, 3))
-            for entry in index.get(key, []):
-                d = _dist_miles(lat, lon, entry["lat"], entry["lon"])
-                if d < best_dist:
-                    best_dist = d
-                    city = entry.get("city", "")
-                    state = entry.get("state", "MO")
-                    best_addr = entry["addr"] + (f", {city}" if city else "") + f", {state}"
-
-    return best_addr if best_dist < 0.1 else None  # within ~0.1 mile
+def _cache_key(lat: float, lon: float) -> str:
+    return f"{round(lat, 4)},{round(lon, 4)}"
 
 
 def _priority_label(roof_age: int | None) -> str:
@@ -295,9 +303,15 @@ def _priority_color(roof_age: int | None) -> str:
     return "#6e7681"
 
 
-def _county(lon: float) -> str:
-    """Rough county determination by longitude."""
-    return "Johnson, KS" if lon < -94.60 else "Jackson, MO"
+def _county(lon: float, lat: float = 39.1) -> str:
+    """Rough county determination by lat/lon for KC metro."""
+    if lon < -94.90:
+        return "Johnson, KS"
+    if lon < -94.60:
+        return "Wyandotte, KS" if lat < 39.10 else "Platte, MO"
+    if lat > 39.17:
+        return "Clay, MO"
+    return "Jackson, MO"
 
 
 def _radius_to_bbox(lat: float, lon: float, radius_miles: float) -> dict:
