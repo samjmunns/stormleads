@@ -1290,7 +1290,8 @@ async def dashboard():
   </div>
   <div class="header-meta">
     <span id="data-source" class="data-badge badge-sample">Sample data</span>
-    <span id="last-updated">—</span>
+    <span id="last-updated" style="font-size:12px;color:#6e7681">—</span>
+    <span id="last-storm" style="font-size:12px;color:#6e7681">—</span>
     <button class="btn btn-primary" onclick="runPipeline()">
       Scan for storms
     </button>
@@ -1733,7 +1734,23 @@ async def dashboard():
 
     // Update timestamp
     document.getElementById('last-updated').textContent =
-      'Updated ' + new Date().toLocaleTimeString();
+      'Scanned ' + new Date().toLocaleTimeString();
+
+    // Show most recent storm date
+    const stormEl = document.getElementById('last-storm');
+    if (zones.length > 0) {
+      const dates = zones.map(z => new Date(z.storm_date)).filter(d => !isNaN(d));
+      if (dates.length) {
+        const latest = new Date(Math.max(...dates));
+        const daysAgo = Math.floor((Date.now() - latest) / 86400000);
+        const dateStr = latest.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        stormEl.textContent = 'Last storm: ' + dateStr + ' (' + daysAgo + 'd ago)';
+        stormEl.style.color = daysAgo <= 3 ? '#3fb950' : daysAgo <= 7 ? '#f0883e' : '#6e7681';
+      }
+    } else {
+      stormEl.textContent = 'No storms in selected window';
+      stormEl.style.color = '#484f58';
+    }
 
     // Count tiers
     let hot = 0, warm = 0, cold = 0;

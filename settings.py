@@ -55,7 +55,7 @@ class KCMetroConfig:
     center_lat: float = 39.0997
     center_lon: float = -94.5786
     # Search radius in miles
-    radius_miles: float = 35.0
+    radius_miles: float = 50.0
     # FIPS codes for target counties
     # Used for assessor lookups and Census data
     counties: dict[str, dict] = field(default_factory=lambda: {
