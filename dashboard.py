@@ -356,6 +356,14 @@ async def get_golden_nuggets(
     })
 
 
+@app.get("/api/forecast")
+async def get_forecast_data():
+    """Return 14-day weather forecast with hail risk and canvassing scores."""
+    from forecast_client import get_forecast
+    data = await get_forecast()
+    return JSONResponse(content=data)
+
+
 @app.get("/api/run-pipeline")
 async def run_pipeline(days: int = Query(default=14, ge=1, le=90)):
     """Trigger the storm pipeline on demand."""
@@ -1109,6 +1117,171 @@ async def dashboard():
 
   .rescan-notice strong { color: #f0f6fc; display: block; margin-bottom: 6px; }
 
+  /* ---- FORECAST TAB ---- */
+  .forecast-panel {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 32px;
+    background: #0d1117;
+  }
+
+  .forecast-panel::-webkit-scrollbar { width: 6px; }
+  .forecast-panel::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+
+  .forecast-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #f0f6fc;
+    margin-bottom: 4px;
+  }
+
+  .forecast-subtitle {
+    font-size: 12px;
+    color: #6e7681;
+    margin-bottom: 20px;
+  }
+
+  .week-summary-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+
+  .week-summary-card {
+    background: #161b22;
+    border: 1px solid #21262d;
+    border-radius: 8px;
+    padding: 14px 20px;
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .week-summary-card h4 {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #6e7681;
+    margin-bottom: 10px;
+  }
+
+  .week-chips {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .week-chip {
+    padding: 4px 10px;
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .chip-good { background: #1a3a2a; color: #3fb950; }
+  .chip-storm { background: #3a1a1a; color: #f85149; }
+  .chip-hail { background: #3a2a1a; color: #f0883e; }
+  .chip-best { background: #1a2a3a; color: #58a6ff; }
+
+  .forecast-table-wrap {
+    border-radius: 8px;
+    border: 1px solid #21262d;
+    overflow: hidden;
+  }
+
+  .forecast-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  .forecast-table th {
+    padding: 10px 16px;
+    background: #161b22;
+    color: #6e7681;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    text-align: left;
+    border-bottom: 1px solid #21262d;
+    white-space: nowrap;
+  }
+
+  .forecast-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid #161b22;
+    vertical-align: middle;
+  }
+
+  .forecast-table tr:last-child td { border-bottom: none; }
+  .forecast-table tr:hover td { background: #161b22; }
+  .forecast-table tr.today td { background: #0d1a2a; }
+
+  .day-cell { min-width: 90px; }
+  .day-name { font-weight: 600; color: #f0f6fc; font-size: 13px; }
+  .day-date { font-size: 11px; color: #6e7681; }
+  .today-badge {
+    display: inline-block;
+    background: #f97316;
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-left: 4px;
+    vertical-align: middle;
+    text-transform: uppercase;
+  }
+
+  .condition-cell { color: #8b949e; font-size: 12px; }
+  .temp-cell {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .temp-high { color: #f0f6fc; font-weight: 600; }
+  .temp-low { color: #6e7681; }
+
+  .precip-cell {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: #8b949e;
+  }
+
+  .hail-badge {
+    display: inline-block;
+    padding: 3px 9px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+  }
+
+  .canvass-cell {
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .accuracy-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    margin-right: 4px;
+    vertical-align: middle;
+  }
+
+  .forecast-footer {
+    margin-top: 14px;
+    font-size: 11px;
+    color: #484f58;
+    line-height: 1.6;
+  }
+
   /* ---- SOURCES TAB ---- */
   .sources-panel {
     flex: 1;
@@ -1303,6 +1476,7 @@ async def dashboard():
   <button class="tab-btn active" id="tab-map-btn" onclick="switchTab('map')">Storm Map</button>
   <button class="tab-btn" id="tab-leads-btn" onclick="switchTab('leads')">Lead Scorer</button>
   <button class="tab-btn" id="tab-nuggets-btn" onclick="switchTab('nuggets')">Golden Nuggets</button>
+  <button class="tab-btn" id="tab-forecast-btn" onclick="switchTab('forecast')">Forecast</button>
   <button class="tab-btn" id="tab-sources-btn" onclick="switchTab('sources')">Sources</button>
 </div>
 
@@ -1401,6 +1575,42 @@ async def dashboard():
       <div class="nugget-map-wrap" style="position:relative">
         <div id="nugget-map"></div>
         <button class="map-toggle-btn" id="nugget-toggle-btn" onclick="toggleNuggetLayer()">Satellite View</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== FORECAST TAB ===== -->
+  <div class="tab-panel" id="tab-forecast">
+    <div class="forecast-panel">
+      <div class="forecast-title">14-Day KC Metro Weather Forecast</div>
+      <div class="forecast-subtitle">Kansas City Metro &mdash; Updated hourly via Open-Meteo &mdash; Hail risk accuracy highest within first 3 days</div>
+      <div id="forecast-loading" style="padding:20px;color:#8b949e;font-size:13px">
+        <span class="loading-spinner"></span> Loading forecast...
+      </div>
+      <div id="forecast-content" style="display:none">
+        <div class="week-summary-row" id="forecast-week-summary"></div>
+        <div class="forecast-table-wrap">
+          <table class="forecast-table">
+            <thead>
+              <tr>
+                <th>Day</th>
+                <th>Conditions</th>
+                <th>High / Low</th>
+                <th>Precip Chance</th>
+                <th>Hail Risk</th>
+                <th>Canvassing</th>
+                <th style="color:#484f58">Forecast Confidence</th>
+              </tr>
+            </thead>
+            <tbody id="forecast-tbody"></tbody>
+          </table>
+        </div>
+        <div class="forecast-footer">
+          Forecast confidence: <span style="color:#3fb950">High</span> = days 1-3 &nbsp;|&nbsp;
+          <span style="color:#d29922">Medium</span> = days 4-7 &nbsp;|&nbsp;
+          <span style="color:#f85149">Low</span> = days 8-14 &nbsp;|&nbsp;
+          Source: Open-Meteo (open-meteo.com) &mdash; WMO weather codes &mdash; free, no API key
+        </div>
       </div>
     </div>
   </div>
@@ -1587,6 +1797,35 @@ async def dashboard():
             <p>Street names come from <strong>OpenStreetMap via Nominatim reverse geocoding</strong> — free, no API key, but rate-limited to 1 request per second. Results are cached in memory for the session.</p>
             <div class="caveat">
               <strong>Limitation:</strong> Clusters are only as good as the underlying LSR reports. If no spotters were in a neighborhood, that neighborhood won&apos;t show up as a Golden Nugget even if it was hit. Always cross-reference with the broader storm zones on the map.
+            </div>
+          </div>
+        </div>
+
+        <!-- Open-Meteo Forecast -->
+        <div class="source-card">
+          <div class="source-card-header">
+            <div class="source-icon source-icon-blue" style="font-size:13px;font-weight:700;color:#58a6ff">WX</div>
+            <div>
+              <div class="source-title">14-Day Weather Forecast <span class="accuracy-badge acc-high">Free, no key</span></div>
+              <div class="source-subtitle">Open-Meteo &mdash; open-meteo.com</div>
+            </div>
+          </div>
+          <div class="source-body">
+            <p>The <strong>Forecast tab</strong> pulls a 14-day daily forecast for KC metro (39.09&deg;N, 94.57&deg;W) from Open-Meteo, a free open-source weather API with no API key required.</p>
+            <div class="highlight">
+              Endpoint: <strong>api.open-meteo.com/v1/forecast</strong><br>
+              Variables: weathercode, high/low temp, precip probability, wind speed<br>
+              Update cadence: Hourly &mdash; data is always current when you load the tab
+            </div>
+            <p><strong>Hail risk</strong> is derived from WMO weather codes:<br>
+              Code 99 = Thunderstorm with heavy hail &rarr; <strong>High</strong><br>
+              Code 96 = Thunderstorm with slight hail &rarr; <strong>Elevated</strong><br>
+              Code 95 + &ge;40% precip &rarr; <strong>Moderate</strong><br>
+              Code 95 &rarr; <strong>Low</strong> &nbsp;|&nbsp; Rain/showers &rarr; <strong>Minimal</strong>
+            </p>
+            <p><strong>Canvassing score</strong> combines sky conditions, temperature comfort (65&ndash;82&deg;F is ideal), and wind speed into a single label: Ideal / Good / Decent / Fair / Poor / Stay in.</p>
+            <div class="caveat">
+              <strong>Forecast confidence:</strong> Hail risk is most reliable in days 1&ndash;3 where NWS model data is highly accurate. Days 4&ndash;7 are medium confidence. Days 8&ndash;14 are directional only — a &ldquo;High&rdquo; hail risk at day 12 means conditions look favorable for storms, not that hail will definitely occur.
             </div>
           </div>
         </div>
@@ -1916,7 +2155,7 @@ async def dashboard():
 
   // ---- TABS ----
   function switchTab(name) {
-    ['map', 'leads', 'nuggets', 'sources'].forEach(t => {
+    ['map', 'leads', 'nuggets', 'forecast', 'sources'].forEach(t => {
       document.getElementById('tab-' + t).classList.toggle('active', t === name);
       document.getElementById('tab-' + t + '-btn').classList.toggle('active', t === name);
     });
@@ -1929,6 +2168,8 @@ async def dashboard():
       document.getElementById('nuggets-filter-days').value = mapDays;
       initNuggetMap();
       loadNuggets();
+    } else if (name === 'forecast') {
+      loadForecast();
     } else {
       setTimeout(() => map.invalidateSize(), 50);
     }
@@ -2247,6 +2488,87 @@ async def dashboard():
         btn.innerHTML = 'Copy canvass list';
         btn.classList.remove('copied');
       }, 2000);
+    });
+  }
+
+  // ---- FORECAST ----
+  let forecastLoaded = false;
+
+  async function loadForecast() {
+    if (forecastLoaded) return;
+    const loading = document.getElementById('forecast-loading');
+    const content = document.getElementById('forecast-content');
+    loading.style.display = 'block';
+    content.style.display = 'none';
+
+    try {
+      const res = await fetch('/api/forecast');
+      const data = await res.json();
+      loading.style.display = 'none';
+
+      if (!data.days || data.days.length === 0) {
+        loading.innerHTML = 'Could not load forecast. Check your connection.';
+        loading.style.display = 'block';
+        return;
+      }
+
+      renderForecast(data);
+      content.style.display = 'block';
+      forecastLoaded = true;
+    } catch (e) {
+      loading.innerHTML = 'Forecast unavailable: ' + e.message;
+    }
+  }
+
+  function renderForecast(data) {
+    // Week summary chips
+    const summaryEl = document.getElementById('forecast-week-summary');
+    summaryEl.innerHTML = '';
+
+    function makeWeekCard(label, w) {
+      if (!w) return '';
+      return '<div class="week-summary-card">' +
+        '<h4>' + label + '</h4>' +
+        '<div class="week-chips">' +
+          '<span class="week-chip chip-good">' + w.good_days + ' good day' + (w.good_days !== 1 ? 's' : '') + '</span>' +
+          (w.storm_days > 0 ? '<span class="week-chip chip-storm">' + w.storm_days + ' storm day' + (w.storm_days !== 1 ? 's' : '') + '</span>' : '') +
+          (w.hail_days > 0 ? '<span class="week-chip chip-hail">' + w.hail_days + ' hail risk</span>' : '') +
+          '<span class="week-chip chip-best">Best: ' + w.best_day + '</span>' +
+        '</div>' +
+      '</div>';
+    }
+
+    summaryEl.innerHTML = makeWeekCard('This Week (Days 1–7)', data.week1) +
+                          makeWeekCard('Next Week (Days 8–14)', data.week2);
+
+    // Table rows
+    const tbody = document.getElementById('forecast-tbody');
+    tbody.innerHTML = '';
+
+    const accuracyColors = { High: '#3fb950', Medium: '#d29922', Low: '#f85149' };
+
+    data.days.forEach(day => {
+      const tr = document.createElement('tr');
+      if (day.is_today) tr.className = 'today';
+
+      const hailStyle = 'background:' + day.hail_risk.color + '22;color:' + day.hail_risk.color;
+      const accColor = accuracyColors[day.forecast_accuracy] || '#484f58';
+
+      tr.innerHTML =
+        '<td class="day-cell">' +
+          '<div class="day-name">' + day.day_name + (day.is_today ? '<span class="today-badge">Today</span>' : '') + '</div>' +
+          '<div class="day-date">' + day.date_display + '</div>' +
+        '</td>' +
+        '<td class="condition-cell">' + day.description + '</td>' +
+        '<td class="temp-cell"><span class="temp-high">' + (day.high_f != null ? day.high_f + '°' : '—') + '</span>' +
+          ' <span class="temp-low">/ ' + (day.low_f != null ? day.low_f + '°' : '—') + '</span></td>' +
+        '<td class="precip-cell">' + day.precip_prob + '%</td>' +
+        '<td><span class="hail-badge" style="' + hailStyle + '">' + day.hail_risk.level + '</span></td>' +
+        '<td class="canvass-cell" style="color:' + day.canvass.color + '">' + day.canvass.label + '</td>' +
+        '<td><span class="accuracy-dot" style="background:' + accColor + '"></span>' +
+          '<span style="color:' + accColor + ';font-size:11px">' + day.forecast_accuracy + '</span></td>';
+
+      tbody.appendChild(tr);
     });
   }
 
