@@ -238,7 +238,7 @@ LOGIN_PAGE = """<!DOCTYPE html>
 <body>
 <div class="login-box">
   <div class="logo">
-    <div class="logo-icon">&#9889;</div>
+    <div class="logo-icon" style="font-size:13px;font-weight:800;color:#fff;letter-spacing:-0.5px">SL</div>
     <h1>Storm<span>Leads</span></h1>
   </div>
   <p class="tagline">KC Metro Storm Damage Intelligence</p>
@@ -1285,7 +1285,7 @@ async def dashboard():
 
 <header>
   <div class="logo">
-    <div class="logo-icon">&#9889;</div>
+    <div class="logo-icon" style="font-size:13px;font-weight:800;color:#fff;letter-spacing:-0.5px">SL</div>
     <h1>Storm<span>Leads</span></h1>
   </div>
   <div class="header-meta">
@@ -1300,10 +1300,10 @@ async def dashboard():
 </header>
 
 <div class="tab-nav">
-  <button class="tab-btn active" id="tab-map-btn" onclick="switchTab('map')">&#127757; Storm Map</button>
-  <button class="tab-btn" id="tab-leads-btn" onclick="switchTab('leads')">&#127919; Lead Scorer</button>
-  <button class="tab-btn" id="tab-nuggets-btn" onclick="switchTab('nuggets')">&#128304; Golden Nuggets</button>
-  <button class="tab-btn" id="tab-sources-btn" onclick="switchTab('sources')">&#128196; Sources</button>
+  <button class="tab-btn active" id="tab-map-btn" onclick="switchTab('map')">Storm Map</button>
+  <button class="tab-btn" id="tab-leads-btn" onclick="switchTab('leads')">Lead Scorer</button>
+  <button class="tab-btn" id="tab-nuggets-btn" onclick="switchTab('nuggets')">Golden Nuggets</button>
+  <button class="tab-btn" id="tab-sources-btn" onclick="switchTab('sources')">Sources</button>
 </div>
 
 <div class="main-layout">
@@ -1320,13 +1320,10 @@ async def dashboard():
       </div>
       <div class="filter-bar">
         <div class="filter-group">
-          <label>Storm age</label>
-          <select id="filter-days" onchange="loadZones()">
-            <option value="3">Last 3 days</option>
-            <option value="7">Last 7 days</option>
-            <option value="14" selected>Last 14 days</option>
-            <option value="30">Last 30 days</option>
-          </select>
+          <label>Days back (max 60)</label>
+          <input type="number" id="filter-days" value="15" min="1" max="60"
+            style="background:#0d1117;border:1px solid #30363d;border-radius:5px;color:#c9d1d9;font-family:inherit;font-size:12px;padding:4px 6px;width:100%"
+            onchange="this.value=Math.min(60,Math.max(1,this.value||15));loadZones()">
         </div>
         <div class="filter-group">
           <label>Min hail</label>
@@ -1354,7 +1351,7 @@ async def dashboard():
     </aside>
     <div class="map-container">
       <div id="map"></div>
-      <button class="map-toggle-btn" id="map-toggle-btn" onclick="toggleMapLayer()">&#128754; Satellite</button>
+      <button class="map-toggle-btn" id="map-toggle-btn" onclick="toggleMapLayer()">Satellite View</button>
     </div>
   </div>
 
@@ -1363,18 +1360,15 @@ async def dashboard():
     <div class="nuggets-layout">
       <aside class="nuggets-sidebar">
         <div class="nuggets-header">
-          <h2>&#128304; Golden Nugget Leads</h2>
+          <h2>Golden Nugget Leads</h2>
           <p>Highest-density hail clusters — specific streets to canvass first.</p>
         </div>
         <div class="nuggets-controls">
           <div class="filter-group">
-            <label>Storm age</label>
-            <select id="nuggets-filter-days" onchange="loadNuggets()">
-              <option value="3">Last 3 days</option>
-              <option value="7">Last 7 days</option>
-              <option value="14" selected>Last 14 days</option>
-              <option value="30">Last 30 days</option>
-            </select>
+            <label>Days back (max 60)</label>
+            <input type="number" id="nuggets-filter-days" value="15" min="1" max="60"
+              style="background:#0d1117;border:1px solid #30363d;border-radius:5px;color:#c9d1d9;font-family:inherit;font-size:12px;padding:4px 6px;width:100%"
+              onchange="this.value=Math.min(60,Math.max(1,this.value||15));loadNuggets()">
           </div>
           <div class="filter-group">
             <label>Min hail</label>
@@ -1401,12 +1395,12 @@ async def dashboard():
         </div>
         <div id="nuggets-list"></div>
         <button class="copy-btn" id="copy-canvass-btn" onclick="copyCanvassList()" style="display:none">
-          &#128203; Copy canvass list
+          Copy canvass list
         </button>
       </aside>
       <div class="nugget-map-wrap" style="position:relative">
         <div id="nugget-map"></div>
-        <button class="map-toggle-btn" id="nugget-toggle-btn" onclick="toggleNuggetLayer()">&#128754; Satellite</button>
+        <button class="map-toggle-btn" id="nugget-toggle-btn" onclick="toggleNuggetLayer()">Satellite View</button>
       </div>
     </div>
   </div>
@@ -1423,7 +1417,7 @@ async def dashboard():
         <!-- NWS Alerts -->
         <div class="source-card">
           <div class="source-card-header">
-            <div class="source-icon source-icon-blue">&#127782;</div>
+            <div class="source-icon source-icon-blue" style="font-size:13px;font-weight:700;color:#58a6ff">NWS</div>
             <div>
               <div class="source-title">NWS Active Alerts <span class="accuracy-badge acc-high">High confidence</span></div>
               <div class="source-subtitle">National Weather Service &mdash; api.weather.gov</div>
@@ -1446,7 +1440,7 @@ async def dashboard():
         <!-- IEM LSR Reports -->
         <div class="source-card">
           <div class="source-card-header">
-            <div class="source-icon source-icon-green">&#127783;</div>
+            <div class="source-icon source-icon-green" style="font-size:13px;font-weight:700;color:#3fb950">LSR</div>
             <div>
               <div class="source-title">Hail &amp; Wind Reports <span class="accuracy-badge acc-high">High confidence</span></div>
               <div class="source-subtitle">Iowa Environmental Mesonet &mdash; IEM Local Storm Reports (LSR)</div>
@@ -1470,7 +1464,7 @@ async def dashboard():
         <!-- IEM SBW Polygons -->
         <div class="source-card">
           <div class="source-card-header">
-            <div class="source-icon source-icon-blue">&#128205;</div>
+            <div class="source-icon source-icon-blue" style="font-size:13px;font-weight:700;color:#58a6ff">SBW</div>
             <div>
               <div class="source-title">Warning Polygons <span class="accuracy-badge acc-high">High confidence</span></div>
               <div class="source-subtitle">IEM Storm-Based Warnings &mdash; NWS Product Text</div>
@@ -1493,7 +1487,7 @@ async def dashboard():
         <!-- Census ACS -->
         <div class="source-card">
           <div class="source-card-header">
-            <div class="source-icon source-icon-purple">&#127968;</div>
+            <div class="source-icon source-icon-purple" style="font-size:13px;font-weight:700;color:#bc8cff">ACS</div>
             <div>
               <div class="source-title">Neighborhood Demographics <span class="accuracy-badge acc-high">2024 data</span></div>
               <div class="source-subtitle">US Census Bureau &mdash; American Community Survey (ACS) 5-Year Estimates</div>
@@ -1521,7 +1515,7 @@ async def dashboard():
         <!-- Damage Probability -->
         <div class="source-card">
           <div class="source-card-header">
-            <div class="source-icon source-icon-orange">&#128200;</div>
+            <div class="source-icon source-icon-orange" style="font-size:13px;font-weight:700;color:#f0883e">DMG</div>
             <div>
               <div class="source-title">Damage Probability Score <span class="accuracy-badge acc-medium">Modeled estimate</span></div>
               <div class="source-subtitle">Based on insurance industry hail damage studies</div>
@@ -1548,7 +1542,7 @@ async def dashboard():
         <!-- Lead Score Formula -->
         <div class="source-card">
           <div class="source-card-header">
-            <div class="source-icon source-icon-gold">&#127919;</div>
+            <div class="source-icon source-icon-gold" style="font-size:13px;font-weight:700;color:#d29922">SCR</div>
             <div>
               <div class="source-title">Lead Score Formula <span class="accuracy-badge acc-medium">Modeled estimate</span></div>
               <div class="source-subtitle">Composite ranking for insurance-covered roof replacements</div>
@@ -1575,7 +1569,7 @@ async def dashboard():
         <!-- Golden Nuggets -->
         <div class="source-card">
           <div class="source-card-header">
-            <div class="source-icon source-icon-gold">&#128304;</div>
+            <div class="source-icon source-icon-gold" style="font-size:13px;font-weight:700;color:#d29922">GEO</div>
             <div>
               <div class="source-title">Golden Nugget Clustering <span class="accuracy-badge acc-high">High confidence</span></div>
               <div class="source-subtitle">Greedy spatial clustering of LSR point reports + OpenStreetMap geocoding</div>
@@ -1600,7 +1594,7 @@ async def dashboard():
         <!-- Confidence summary -->
         <div class="source-card">
           <div class="source-card-header">
-            <div class="source-icon source-icon-red">&#9888;&#65039;</div>
+            <div class="source-icon source-icon-red" style="font-size:13px;font-weight:700;color:#f85149">INFO</div>
             <div>
               <div class="source-title">Overall Confidence &amp; Limitations</div>
               <div class="source-subtitle">What to trust, what to verify in the field</div>
@@ -1632,13 +1626,10 @@ async def dashboard():
     <div class="scorer-panel">
       <div class="scorer-controls">
         <div class="filter-group">
-          <label>Storm age</label>
-          <select id="leads-filter-days" onchange="loadLeads()">
-            <option value="3">Last 3 days</option>
-            <option value="7">Last 7 days</option>
-            <option value="14" selected>Last 14 days</option>
-            <option value="30">Last 30 days</option>
-          </select>
+          <label>Days back (max 60)</label>
+          <input type="number" id="leads-filter-days" value="15" min="1" max="60"
+            style="background:#0d1117;border:1px solid #30363d;border-radius:5px;color:#c9d1d9;font-family:inherit;font-size:12px;padding:4px 6px;width:100%"
+            onchange="this.value=Math.min(60,Math.max(1,this.value||15));loadLeads()">
         </div>
         <div class="filter-group">
           <label>Min hail</label>
@@ -1680,13 +1671,13 @@ async def dashboard():
       map.removeLayer(satelliteLabel);
       darkTile.addTo(map);
       isSatellite = false;
-      document.getElementById('map-toggle-btn').textContent = '🛰 Satellite';
+      document.getElementById('map-toggle-btn').textContent = 'Satellite View';
     } else {
       map.removeLayer(darkTile);
       satelliteTile.addTo(map);
       satelliteLabel.addTo(map);
       isSatellite = true;
-      document.getElementById('map-toggle-btn').textContent = '🗺 Dark Map';
+      document.getElementById('map-toggle-btn').textContent = 'Dark Map';
     }
   }
 
@@ -1696,6 +1687,22 @@ async def dashboard():
   // Store zone circles for click highlighting
   let zoneCircles = {};
   let activeZoneId = null;
+
+  // ---- DAMAGE LIKELIHOOD LABELS ----
+  function dmgLabel(pct) {
+    if (pct >= 90) return 'Extremely Likely';
+    if (pct >= 70) return 'Very Likely';
+    if (pct >= 50) return 'Likely';
+    if (pct >= 30) return 'Possible';
+    if (pct >= 15) return 'Unlikely';
+    return 'Low Risk';
+  }
+
+  function dmgColor(pct) {
+    if (pct >= 70) return '#f85149';
+    if (pct >= 40) return '#f0883e';
+    return '#8b949e';
+  }
 
   // ---- TIER COLORS ----
   const tierColors = {
@@ -1811,7 +1818,7 @@ async def dashboard():
           '<div class="popup-content">' +
           '<h3>' + zone.zone_id + '</h3>' +
           '<p style="color:#f97316;font-size:11px;margin-bottom:6px">⬤ Damage epicenter</p>' +
-          '<p>Damage probability: <strong>' + Math.round(zone.damage_probability * 100) + '%</strong></p>' +
+          '<p>Damage likelihood: <strong>' + dmgLabel(Math.round(zone.damage_probability * 100)) + '</strong></p>' +
           '<p>Max hail: <strong>' + zone.max_hail_inches + '"</strong></p>' +
           '<p>Reports in zone: <strong>' + (zone.event_count || 'polygon only') + '</strong></p>' +
           '<p>Top zip codes: <strong>' + topZipStr + '</strong></p>' +
@@ -1836,7 +1843,7 @@ async def dashboard():
           '<span class="tier-badge tier-' + zone.tier + '">' + zone.tier + '</span>' +
         '</div>' +
         '<div class="zone-stats">' +
-          '<div class="zone-stat">Damage<strong>' + Math.round(zone.damage_probability * 100) + '%</strong></div>' +
+          '<div class="zone-stat" style="grid-column:span 2">Likelihood<strong style="font-size:13px;color:' + dmgColor(Math.round(zone.damage_probability * 100)) + '">' + dmgLabel(Math.round(zone.damage_probability * 100)) + '</strong></div>' +
           '<div class="zone-stat">Hail<strong>' + zone.max_hail_inches + '"</strong></div>' +
           '<div class="zone-stat">Reports<strong>' + (zone.event_count || '—') + '</strong></div>' +
         '</div>' +
@@ -1914,11 +1921,11 @@ async def dashboard():
       document.getElementById('tab-' + t + '-btn').classList.toggle('active', t === name);
     });
     if (name === 'leads') {
-      const mapDays = document.getElementById('filter-days').value;
+      const mapDays = Math.min(60, Math.max(1, parseInt(document.getElementById('filter-days').value) || 15));
       document.getElementById('leads-filter-days').value = mapDays;
       loadLeads();
     } else if (name === 'nuggets') {
-      const mapDays = document.getElementById('filter-days').value;
+      const mapDays = Math.min(60, Math.max(1, parseInt(document.getElementById('filter-days').value) || 15));
       document.getElementById('nuggets-filter-days').value = mapDays;
       initNuggetMap();
       loadNuggets();
@@ -1997,7 +2004,7 @@ async def dashboard():
       '<th>#</th>' +
       '<th>ZIP</th>' +
       '<th class="score-bar-cell">Lead Score</th>' +
-      '<th class="numeric">Dmg Prob</th>' +
+      '<th>Damage Likelihood</th>' +
       '<th class="numeric">Max Hail</th>' +
       '<th>Storms (3d / 7d / 14d / 30d)</th>' +
       '<th class="numeric">Owner%</th>' +
@@ -2017,7 +2024,7 @@ async def dashboard():
             '<span class="score-val" style="color:' + col + '">' + sc + '</span>' +
           '</div>' +
         '</td>' +
-        '<td class="demo-cell available" style="text-align:right">' + lead.damage_prob + '%</td>' +
+        '<td style="color:' + dmgColor(lead.damage_prob) + ';font-size:12px;font-weight:600">' + dmgLabel(lead.damage_prob) + '</td>' +
         '<td class="hail-cell" style="text-align:right;color:' + (lead.max_hail >= 1.5 ? '#f85149' : lead.max_hail >= 1.0 ? '#f0883e' : '#c9d1d9') + '">' +
           (lead.max_hail > 0 ? lead.max_hail + '"' : '—') +
         '</td>' +
@@ -2070,13 +2077,13 @@ async def dashboard():
         nuggetMap.removeLayer(nuggetSatLabel);
         nuggetDarkTile.addTo(nuggetMap);
         isNuggetSat = false;
-        document.getElementById('nugget-toggle-btn').textContent = '🛰 Satellite';
+        document.getElementById('nugget-toggle-btn').textContent = 'Satellite View';
       } else {
         nuggetMap.removeLayer(nuggetDarkTile);
         nuggetSatTile.addTo(nuggetMap);
         nuggetSatLabel.addTo(nuggetMap);
         isNuggetSat = true;
-        document.getElementById('nugget-toggle-btn').textContent = '🗺 Dark Map';
+        document.getElementById('nugget-toggle-btn').textContent = 'Dark Map';
       }
     };
 
@@ -2155,7 +2162,7 @@ async def dashboard():
             '<h3>#' + n.rank + ' ' + n.street + '</h3>' +
             '<p>Max hail: <strong>' + n.max_hail + '"</strong></p>' +
             '<p>Reports in cluster: <strong>' + n.report_count + '</strong></p>' +
-            '<p>Damage probability: <strong>' + n.damage_prob + '%</strong></p>' +
+            '<p>Damage likelihood: <strong>' + dmgLabel(n.damage_prob) + '</strong></p>' +
             '<p>Zone: <strong>' + n.zone_id + '</strong></p>' +
             '</div>'
           );
@@ -2189,7 +2196,7 @@ async def dashboard():
           '<div class="nugget-meta">' +
             '<span class="nugget-stat"><strong class="' + (n.max_hail >= 2.0 ? 'nugget-hail-hot' : n.max_hail >= 1.0 ? 'nugget-hail-warm' : '') + '">' + n.max_hail + '"</strong> hail</span>' +
             '<span class="nugget-stat"><strong>' + n.report_count + '</strong> report' + (n.report_count !== 1 ? 's' : '') + '</span>' +
-            '<span class="nugget-stat"><strong>' + n.damage_prob + '%</strong> dmg</span>' +
+            '<span class="nugget-stat" style="color:' + dmgColor(n.damage_prob) + '">' + dmgLabel(n.damage_prob) + '</span>' +
             (dateStr ? '<span class="nugget-stat" style="color:#484f58">' + dateStr + '</span>' : '') +
           '</div>' +
           '<div class="nugget-zone-tag">' + n.zone_id + (n.tier ? ' &bull; ' + n.tier : '') + '</div>' +
@@ -2237,7 +2244,7 @@ async def dashboard():
       btn.textContent = '✓ Copied!';
       btn.classList.add('copied');
       setTimeout(() => {
-        btn.innerHTML = '&#128203; Copy canvass list';
+        btn.innerHTML = 'Copy canvass list';
         btn.classList.remove('copied');
       }, 2000);
     });
